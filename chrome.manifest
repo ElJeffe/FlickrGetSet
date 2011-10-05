@@ -1,0 +1,5 @@
+content   FlickrGetSet                 chrome/content/
+locale    FlickrGetSet   en-US         chrome/locale/en-US/
+
+
+overlay   chrome://browser/content/browser.xul   chrome://FlickrGetSet/content/ff-overlay.xul

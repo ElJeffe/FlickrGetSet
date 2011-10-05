@@ -1,65 +1,67 @@
 
 
-var FlickrOAuth; if (FlickrOAuth == null) FlickrOAuth = 
-{
-  init: function()
-  {
-    this.consumerKey = "fb83db48de20585d51c21052562dc3ae";
-    this.consumerSecret = "4cafb2345ff39878";
-    this.token = null;
-    this.tokenSecret = null;
-  },
-
-  authenticate: function(userName)
-  {
-    // make sure that the token is null
-    this.token = null;
-    this.tokenSecret = null;
-
-    if (!userName)
+var FlickrOAuth; if (FlickrOAuth == null) FlickrOAuth = {
+    init: function()
     {
-      Application.console.log("Not authentication needed");
-      this.authenticationNeeded = false;
-      return true;
-    }
-    var authenticationTokenList = FlickrOAuth.getAuthToken(userName);
-    if (authenticationTokenList)
+      this.consumerKey = "fb83db48de20585d51c21052562dc3ae";
+      this.consumerSecret = "4cafb2345ff39878";
+      this.token = null;
+      this.tokenSecret = null;
+    },
+
+    authenticate: function(userName)
     {
-      this.token = authenticationTokenList[0];
-      this.tokenSecret = authenticationTokenList[1];
-      Application.console.log("Existing authentication token for user " + userName + " : " + this.token);
+      // make sure that the token is null
+      this.token = null;
+      this.tokenSecret = null;
 
-      var evt = document.createEvent('Event');  
-      evt.initEvent("flickrUpdate", true, true);  
-      document.getElementById("flickrEventSender").dispatchEvent(evt);
-
-      // test if the token is still approved
-      if (FlickrOAuth.testLogin())
+      if (!userName)
       {
-        Application.console.log("token is ok");
+        Application.console.log("Not authentication needed");
+        this.authenticationNeeded = false;
         return true;
       }
-      else
+      var authenticationTokenList = FlickrOAuth.getAuthToken(userName);
+      if (authenticationTokenList)
       {
-        FlickrOAuth.removeAuthToken(userName);
-        this.token = null;
-        this.tokenSecret = null;
+        this.token = authenticationTokenList[0];
+        this.tokenSecret = authenticationTokenList[1];
+        Application.console.log("Existing authentication token for user " + userName + " : " + this.token);
+
+        var evt = document.createEvent('Event');  
+        evt.initEvent("flickrUpdate", true, true);
+        //evt.detail = {method:"method", data:"data"};
+        evt.method = "method1";
+        evt.data = "data1";
+        document.getElementById("flickrEventSender").dispatchEvent(evt);
+
+        // test if the token is still approved
+        if (FlickrOAuth.testLogin())
+        {
+          Application.console.log("token is ok");
+          return true;
+        }
+        else
+        {
+          FlickrOAuth.removeAuthToken(userName);
+          this.token = null;
+          this.tokenSecret = null;
+        }
       }
-    }
 
-    Application.console.log("TODO: Ask if authentication is needed");
+      Application.console.log("TODO: Ask if authentication is needed");
 
-    // request token
-    var result = FlickrOAuth.flickrCall("http://www.flickr.com/services/oauth/request_token", {oauth_callback:"oob"});
-    if (!result)
-    {
-      return false;
-    }
-    // save the token and token secret
-    this.token = result["oauth_token"];
-    this.tokenSecret = result["oauth_token_secret"];
+      // request token
+      var result = FlickrOAuth.flickrCall("http://www.flickr.com/services/oauth/request_token",{oauth_callback:"oob"}, false, false);
+      if (!result)
+      {
+        return false;
+      }
+      // save the token and token secret
+      this.token = result["oauth_token"];
+      this.tokenSecret = result["oauth_token_secret"];
 
-    // request authorization
+      // request authorization
       var authorizeUrl="http://www.flickr.com/services/oauth/authorize?oauth_token="+result["oauth_token"]+"&perms=read";
       var params = {url:authorizeUrl, out:null};
       window.openDialog("chrome://flickrgetset/content/authenticateDialog.xul",  
@@ -78,7 +80,7 @@ var FlickrOAuth; if (FlickrOAuth == null) FlickrOAuth =
 
       // exchange the request token for an access token
 
-      var result = FlickrOAuth.flickrCall("http://www.flickr.com/services/oauth/access_token", {oauth_verifier:verificationCode});
+      var result = FlickrOAuth.flickrCall("http://www.flickr.com/services/oauth/access_token",{oauth_verifier:verificationCode}, false, false);
       if (!result)
       {
         return false;
@@ -103,91 +105,136 @@ var FlickrOAuth; if (FlickrOAuth == null) FlickrOAuth =
 
       // test if the login is ok
       FlickrOAuth.testLogin();
-  },
+    },
 
-  testLogin: function()
-  {
-    var result = FlickrOAuth.flickrCall("http://api.flickr.com/services/rest", {method:"flickr.test.login"}, true);
-    if (result.stat == "ok")
+    testLogin: function()
     {
-      return true;
-    }
-    return false;
-  },
-
-  flickrCall: function(url, extraParams, returnJson)
-  {
-    var accessor = {
-      consumerKey : this.consumerKey,
-      consumerSecret: this.consumerSecret
-    };
-
-    if (this.token)
-    {
-      accessor["token"] = this.token;
-    }
-    if (this.tokenSecret)
-    {
-      accessor["tokenSecret"] = this.tokenSecret;
-    }
-
-    var message = {
-      action: url,
-      method: "GET",
-      parameters: [
-        ["oauth_signature_method", "HMAC-SHA1"],
-        ["oauth_version", "1.0"]
-      ]
-    };
-    for (p in extraParams)
-    {
-      OAuth.setParameter(message, p, extraParams[p]);
-    }
-    if (returnJson)
-    {
-      OAuth.setParameter(message, "format", "json");
-      OAuth.setParameter(message, "nojsoncallback", "1");
-    }
-
-
-    OAuth.completeRequest(message, accessor);
-
-    var url = message["action"] + '?' + OAuth.formEncode(message.parameters);
-    Application.console.log(url);
-    var request = new XMLHttpRequest();  
-    request.open('GET', url, false);
-    request.send(null);
-
-    if (request.status == 200)
-    {
-      Application.console.log(request.responseText);
-      if (!returnJson)
+      var result = FlickrOAuth.flickrCall("http://api.flickr.com/services/rest",{method:"flickr.test.login"}, true, false);
+      if (result.stat == "ok")
       {
-        var result = OAuth.getParameterMap(request.responseText);
-        for (var p in result) 
-        {  
-           Application.console.log(p + ':' + result[p]);
+        return true;
+      }
+      return false;
+    },
+
+    flickrCallMethod: function(method, extraParams)
+    {
+      extraParams["method"] = method;
+      FlickrOAuth.flickrCall("http://api.flickr.com/services/rest",extraParams, true, true);
+    },
+
+    flickrCall: function(url, extraParams, returnJson, async)
+    {
+      var accessor = {
+        consumerKey : this.consumerKey,
+        consumerSecret: this.consumerSecret
+      };
+
+      if (this.token)
+      {
+        accessor["token"] = this.token;
+      }
+      if (this.tokenSecret)
+      {
+        accessor["tokenSecret"] = this.tokenSecret;
+      }
+
+      var message = {
+        action: url,
+        method: "GET",
+        parameters: [
+                    ["oauth_signature_method", "HMAC-SHA1"],
+                    ["oauth_version", "1.0"]
+                    ]
+      };
+      if (extraParams)
+      {
+        for (p in extraParams)
+        {
+          OAuth.setParameter(message, p, extraParams[p]);
         }
-        return result;
+      }
+      if (returnJson)
+      {
+        OAuth.setParameter(message, "format", "json");
+        OAuth.setParameter(message, "nojsoncallback", "1");
+      }
+
+
+      OAuth.completeRequest(message, accessor);
+
+      var url = message["action"] + '?' + OAuth.formEncode(message.parameters);
+      Application.console.log(url);
+      var request = new XMLHttpRequest();
+      if (async)
+      {
+        request.open('GET', url, false);
+        request.onreadystatechange = function ()
+        {
+          if (request.readyState == 4)
+          {
+            Application.console.log(request.responseText);
+            var method = extraParams["method"];
+            if (request.status != 200)
+            {
+              FlickrOAuth.dispatchFlickrUpdate(method, extraParams, false);
+            }
+            else
+            {
+              FlickrOAuth.dispatchFlickrUpdate(method, JSON.parse(request.responseText), true);
+            }
+          }
+        }
+        request.send(null);
       }
       else
       {
-        return JSON.parse(request.responseText);
+        request.open('GET', url, false);
+        request.send(null);
+
+        if (request.status == 200)
+        {
+          Application.console.log(request.responseText);
+          if (!returnJson)
+          {
+            var result = OAuth.getParameterMap(request.responseText);
+            for (var p in result)
+            {
+              Application.console.log(p + ':' + result[p]);
+            }
+            return result;
+          }
+          else
+          {
+            return JSON.parse(request.responseText);
+          }
+        }
+        else
+        {
+          Application.console.log("Call failes for action: " + message["action"] + "\nStatus: " + request.status + "\nResponse:\n" + request.responseText);
+          return null;
+        }
       }
-    }
-    else
+
+    },
+
+    dispatchFlickrUpdate: function(method, data, status)
     {
-      Application.console.log("Call failes for action: " + message["action"] + "\nStatus: " + request.status + "\nResponse:\n" + request.responseText);
-      return null;
-    }
-  },
+      var evt = document.createEvent('Event');  
+      evt.initEvent("flickrUpdate", true, true);
+      evt.method = method;
+      evt.data = data;
+      evt.status = status;
+      document.getElementById("flickrEventSender").dispatchEvent(evt);
 
-  setVerificationCode: function(verificationCode)
-  {
-    Application.console.log("params verif code: " + verificationCode);
-  },
+    },
 
-  getAuthToken: function(userName)
+    setVerificationCode: function(verificationCode)
+    {
+      Application.console.log("params verif code: " + verificationCode);
+    },
+
+    getAuthToken: function(userName)
     {
       Application.console.log("Get authentication token for user " + userName);
       var loginManager = Components.classes["@mozilla.org/login-manager;1"].  

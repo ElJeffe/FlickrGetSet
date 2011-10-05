@@ -42,14 +42,13 @@ var downloadDialog = {
   {
     document.getElementById("flickrEventSender").addEventListener("flickrUpdate", downloadDialog.onFlickrUpdate);
 
-    var evt = document.createEvent('Event');  
-    // define that the event name is `build`  
-    evt.initEvent("flickrUpdate", true, true);  
-      
-    // elem is any element  
-    document.getElementById("flickrEventSender").dispatchEvent(evt);
-
-    FlickrOAuth.authenticate("ElJeffe");
+    if (!FlickrOAuth.authenticate("ElJeffe"))
+    {
+      alert("Authentication failed");
+      return;
+    }
+    // get photos
+    FlickrOAuth.flickrCallMethod("flickr.photosets.getPhotos", {photoset_id:"72157627601593559", extras:"url_sq,url_z,url_l,url_o"});
     //downloadDialog.authorizeFlickr();
     return;
     if (this.setTitle != null)
@@ -127,9 +126,9 @@ var downloadDialog = {
     
   },
 
-  onFlickrUpdate: function(data)
+  onFlickrUpdate: function(event)
   {
-    Application.console.log("FlickrUpdate data received");
+    Application.console.log("FlickrUpdate data received: Status: " + event.status + "Method: " + event.method + " Data: " + event.data);
   },
 
   downloadNextImage: function()

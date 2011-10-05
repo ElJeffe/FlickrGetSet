@@ -15,8 +15,9 @@ var flickrHook = {
     {
       if (doc.location.href == "http://www.steelant.be/")
       {
-      window.openDialog("chrome://flickrgetset/content/downloadDialog.xul",  
-                          "download-set-dialog-"+this.counter, "chrome,centerscreen", "test", "test", new Array());
+        FlickrDownloadManager.downloadSet("72157627601593559", "ElJeffe");
+//    window.openDialog("chrome://flickrgetset/content/downloadDialog.xul",
+//                        "download-set-dialog-"+this.counter, "chrome,centerscreen", "test", "test", new Array());
       }
       return;
     }

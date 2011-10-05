@@ -1,4 +1,4 @@
-var downloadDialogListener =  
+var FlickrDownloadManagerListener =  
 {  
   init: function()
   {
@@ -23,7 +23,7 @@ var downloadDialogListener =
    if(aFlag & Components.interfaces.nsIWebProgressListener.STATE_STOP)  
    {  
      // This fires when the load finishes
-     downloadDialog.downloadNextImage();
+     FlickrDownloadManager.downloadNextImage();
    }  
   },  
   
@@ -37,19 +37,12 @@ var downloadDialogListener =
   onSecurityChange: function(aWebProgress, aRequest, aState) { }  
 }  
 
-var downloadDialog = {
+var FlickrDownloadManager; if (FlickrDownloadManager == null) FlickrDownloadManager = {
   init: function() 
   {
-    document.getElementById("flickrEventSender").addEventListener("flickrUpdate", downloadDialog.onFlickrUpdate);
+    document.getElementById("flickrEventSender").addEventListener("flickrUpdate", FlickrDownloadManager.onFlickrUpdate);
 
-    if (!FlickrOAuth.authenticate("ElJeffe"))
-    {
-      alert("Authentication failed");
-      return;
-    }
-    // get photos
-    FlickrOAuth.flickrCallMethod("flickr.photosets.getPhotos", {photoset_id:"72157627601593559", extras:"url_sq,url_z,url_l,url_o"});
-    //downloadDialog.authorizeFlickr();
+    //FlickrDownloadManager.authorizeFlickr();
     return;
     if (this.setTitle != null)
     {
@@ -63,17 +56,30 @@ var downloadDialog = {
     this.request = null;
 
     // create directory to save to
-    if (! downloadDialog.createSaveDir())
+    if (! FlickrDownloadManager.createSaveDir())
     {
       window.close();
       return false;
     }
 
-    downloadDialogListener.init();
+    FlickrDownloadManagerListener.init();
 
-    downloadDialog.downloadNextImage();
+    FlickrDownloadManager.downloadNextImage();
     return;
   },
+
+  downloadSet: function(setId, userName)
+  {
+    if (!FlickrOAuth.authenticate("ElJeffe"))
+    {
+      alert("Authentication failed");
+      return;
+    }
+    // get photos
+    FlickrOAuth.flickrCallMethod("flickr.photosets.getPhotos", {photoset_id:"72157627601593559", extras:"url_sq,url_z,url_l,url_o"});
+
+  },
+
   
   createSaveDir: function() 
   {
@@ -151,8 +157,8 @@ var downloadDialog = {
     }
     var photoId = this.photoIds[this.photoIdx];
     this.photoIdx ++;
-    //downloadDialog.getInfo(photoId);
-    downloadDialog.getSizesPage(photoId);
+    //FlickrDownloadManager.getInfo(photoId);
+    FlickrDownloadManager.getSizesPage(photoId);
   },
 
   getSizesPage: function(photoId)
@@ -170,7 +176,7 @@ var downloadDialog = {
         {
 
           Application.console.log('Error', request.statusText);
-          downloadDialog.downloadNextImage();
+          FlickrDownloadManager.downloadNextImage();
           return;
         }
         htmlResponse = request.responseText;
@@ -200,7 +206,7 @@ var downloadDialog = {
         if (imageSrc == null)
         {
           alert("Failed to find the original photo for '" + title +"' with ID " + photoId);
-          downloadDialog.downloadNextImage();
+          FlickrDownloadManager.downloadNextImage();
           return;
         }
 
@@ -217,7 +223,7 @@ var downloadDialog = {
         if (targetFile.exists())
         {
           Application.console.log("The image already exists. Skip downloading. " + targetFile.path);
-          downloadDialog.downloadNextImage();
+          FlickrDownloadManager.downloadNextImage();
           return;
         }
         // create the file
@@ -231,7 +237,7 @@ var downloadDialog = {
         const flags = nsIWBP.PERSIST_FLAGS_REPLACE_EXISTING_FILES;  
         obj_Persist.persistFlags = flags | nsIWBP.PERSIST_FLAGS_FROM_CACHE;  
         // set listener
-        obj_Persist.progressListener = downloadDialogListener;
+        obj_Persist.progressListener = FlickrDownloadManagerListener;
         
         //save file to target  
         obj_Persist.saveURI(imageUri,null,null,null,null,targetFile); 
@@ -256,7 +262,7 @@ var downloadDialog = {
         {
 
           Application.console.log('Error', request.statusText);
-          downloadDialog.downloadNextImage();
+          FlickrDownloadManager.downloadNextImage();
           return;
         }
         var xmlResponse = request.responseXML;
@@ -264,7 +270,7 @@ var downloadDialog = {
         if (photoTags.length != 1)
         {
           Application.console.log("Oops! could not get photo tag from info for "+ photoId +". Response: \n" + request.responseText);
-          downloadDialog.downloadNextImage();
+          FlickrDownloadManager.downloadNextImage();
           return;
         }
         var photoTag = photoTags[0];
@@ -283,14 +289,14 @@ var downloadDialog = {
         } catch (e)
         {
           alert("failed to parse photo data " + e.message);
-          downloadDialog.downloadNextImage();
+          FlickrDownloadManager.downloadNextImage();
           return;
         }
         var titleTags = xmlResponse.getElementsByTagName("title");
         if (photoTags.length != 1)
         {
           Application.console.log("Oops! could not get title tag from info");
-          downloadDialog.downloadNextImage();
+          FlickrDownloadManager.downloadNextImage();
           return;
         }
         var title = titleTags[0].textContent;
@@ -324,7 +330,7 @@ var downloadDialog = {
         if (targetFile.exists())
         {
           Application.console.log("The image already exists. Skip downloading. " + targetFile.path);
-          downloadDialog.downloadNextImage();
+          FlickrDownloadManager.downloadNextImage();
           return;
         }
         // create the file
@@ -338,7 +344,7 @@ var downloadDialog = {
         const flags = nsIWBP.PERSIST_FLAGS_REPLACE_EXISTING_FILES;  
         obj_Persist.persistFlags = flags | nsIWBP.PERSIST_FLAGS_FROM_CACHE;  
         // set listener
-        obj_Persist.progressListener = downloadDialogListener;
+        obj_Persist.progressListener = FlickrDownloadManagerListener;
         
         //save file to target  
         obj_Persist.saveURI(imageUri,null,null,null,null,targetFile); 
@@ -444,5 +450,5 @@ var downloadDialog = {
   },
 }
 
-downloadDialog.init();
+FlickrDownloadManager.init();
 

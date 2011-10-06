@@ -13,7 +13,8 @@ var flickrHook = {
     var doc = aEvent.originalTarget; // doc is document that triggered "onload" event  
     if (!/.*flickr\.com\/.*\/sets\/\d+.*/.test(doc.location.href))
     {
-      if (doc.location.href == "http://www.steelant.be/")
+
+      if (/.*www\.steelant\.be.*/.test(doc.location.href))
       {
         FlickrDownloadManager.downloadSet("72157627601593559", "ElJeffe");
 //    window.openDialog("chrome://flickrgetset/content/downloadDialog.xul",

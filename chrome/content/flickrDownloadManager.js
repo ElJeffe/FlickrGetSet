@@ -87,7 +87,6 @@ var FlickrDownloadManager; if (FlickrDownloadManager == null) FlickrDownloadMana
       return;
     }
     FlickrOAuth.flickrCallMethod("flickr.photosets.getInfo", {photoset_id:this.setId});
-    // FlickrOAuth.flickrCallMethod("flickr.photosets.getPhotos", {photoset_id:this.setId, extras:"url_sq,url_z,url_l,url_o"});
   },
   
   createSaveDir: function(baseSaveDir, setName) 
@@ -147,32 +146,55 @@ var FlickrDownloadManager; if (FlickrDownloadManager == null) FlickrDownloadMana
       Application.console.log("Failed to get a result for method " + method + "\n" + data);
       return;
     }
+
+    if (data.stat && data.stat == "fail")
+    {
+      Application.console.log("Flickr call failed for: " + method + " Message: " + (data.message?data.message:""));
+      return;
+    }
     switch (method)
     {
     case "flickr.photosets.getInfo":
-      if (data.stat && data.stat == "fail")
-      {
-        Application.console.log("Failed to get information for this set: " + method);
-        break;
-      }
-      var baseSaveDir = FlickrDownloadManager.getBaseSaveDir();
-      if (!baseSaveDir)
-      {
-        Application.console.log("Choosing saving directory has been canceled");
-        break;
-      }
-      var saveDir = FlickrDownloadManager.createSaveDir(baseSaveDir, data.photoset.title._content);
-      if (!saveDir)
-      {
-        Application.console.log("Failed to create save directory");
-        break;
-      }
-      // save the data
-      this.setData[data.photoset.id] = {title:data.photoset.title._content, saveDirectory:saveDir};
+      FlickrDownloadManager.handleSetInfo(data);
+      break;
+    case "flickr.photosets.getPhotos":
+      FlickrDownloadManager.handleSetPhotos(data);
       break;
     default:
       Application.console.log("Got a flickr update for an unknown method: " + method);
     }
+  },
+
+  handleSetInfo: function(data)
+  {
+    var setId = data.photoset.id;
+    var setTitle = data.photoset.title._content;
+    if (this.setData[setId])
+    {
+      alert("This set is already being downloaded");
+      return;
+    }
+    var baseSaveDir = FlickrDownloadManager.getBaseSaveDir();
+    if (!baseSaveDir)
+    {
+      Application.console.log("Choosing saving directory has been canceled");
+      return;
+    }
+    var saveDir = FlickrDownloadManager.createSaveDir(baseSaveDir, setTitle);
+    if (!saveDir)
+    {
+      Application.console.log("Failed to create save directory");
+      return;
+    }
+    // save the data
+    this.setData[setId] = {title:setTitle, saveDirectory:saveDir};
+    // get the photos for this set
+    FlickrOAuth.flickrCallMethod("flickr.photosets.getPhotos", {photoset_id:setId, extras:"url_sq,url_z,url_l,url_o"});
+
+  },
+
+  handleSetInfo: function(data)
+  {
   },
 
   getBaseSaveDir: function()
@@ -200,7 +222,7 @@ var FlickrDownloadManager; if (FlickrDownloadManager == null) FlickrDownloadMana
     prefs.setComplexValue("saveDir",
                           Components.interfaces.nsILocalFile, fp.file);
     return fp.file;
-  }
+  },
 
   downloadNextImage: function()
   {

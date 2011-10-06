@@ -40,7 +40,8 @@ var FlickrDownloadManagerListener =
 var FlickrDownloadManager; if (FlickrDownloadManager == null) FlickrDownloadManager = {
   init: function() 
   {
-    document.getElementById("flickrEventSender").addEventListener("flickrUpdate", FlickrDownloadManager.onFlickrUpdate);
+    this.setData = {};
+    FlickrOAuth.setFlickrUpdateCb(function(s, m, d) {FlickrDownloadManager.flickrUpdate(s, m, d)});
 
     //FlickrDownloadManager.authorizeFlickr();
     return;
@@ -70,72 +71,136 @@ var FlickrDownloadManager; if (FlickrDownloadManager == null) FlickrDownloadMana
 
   downloadSet: function(setId, userName)
   {
-    if (!FlickrOAuth.authenticate("ElJeffe"))
+    this.setId = setId;
+    this.userName = userName;
+    FlickrOAuth.authenticate(userName, function(status) {FlickrDownloadManager.authenticateCb(status)});
+    // get photos
+    // FlickrOAuth.flickrCallMethod("flickr.photosets.getPhotos", {photoset_id:"72157627601593559", extras:"url_sq,url_z,url_l,url_o"});
+  },
+
+  authenticateCb: function(status)
+  {
+    Application.console.log("SetId: " + this.setId);
+    if (!status)
     {
       alert("Authentication failed");
       return;
     }
-    // get photos
-    FlickrOAuth.flickrCallMethod("flickr.photosets.getPhotos", {photoset_id:"72157627601593559", extras:"url_sq,url_z,url_l,url_o"});
-
+    FlickrOAuth.flickrCallMethod("flickr.photosets.getInfo", {photoset_id:this.setId});
+    // FlickrOAuth.flickrCallMethod("flickr.photosets.getPhotos", {photoset_id:this.setId, extras:"url_sq,url_z,url_l,url_o"});
   },
-
   
-  createSaveDir: function() 
+  createSaveDir: function(baseSaveDir, setName) 
   {
-    if (!this.saveDir.isDirectory())
+    if (!baseSaveDir.isDirectory())
     {
       alert("The chosen directory does not exist! " + this.saveDir.path);
-      return false;
+      return null;
     }
-    var baseDir = this.saveDir.clone();
-    this.saveDir.append(this.setTitle);
-    if (!this.saveDir.exists())
+    var saveDir = baseSaveDir.clone();
+    saveDir.append(setName);
+    if (!saveDir.exists())
     {
       try
       {
-        this.saveDir.create(this.saveDir.DIRECTORY_TYPE, 0775);
+        saveDir.create(saveDir.DIRECTORY_TYPE, 0775);
       } catch (e)
       {
         Application.console.log("Error message: " + e.message);
-        alert("Could not create the directory '" + this.saveDir.path + "'");
-        return false;
+        alert("Could not create the directory '" + saveDir.path + "'");
+        return null;
       }
     }
-    else if (!this.saveDir.isDirectory())
+    else if (!saveDir.isDirectory())
     {
       for (var i = 1; i < 1000; i++)
       {
-        this.saveDir = baseDir.clone();
-        this.saveDir.append(this.setTitle +'_' + i);
+        saveDir = baseSaveDir.clone();
+        saveDir.append(this.setTitle +'_' + i);
         if (!this.saveDir.exists())
         {
           try
           {
-            this.saveDir.create(this.saveDir.DIRECTORY_TYPE, 0775);
+            saveDir.create(saveDir.DIRECTORY_TYPE, 0775);
             break;
           } catch (e)
           {
             Application.console.log("Error message: " + e.message);
-            alert("Could not create the directory '" + this.saveDir.path + "'");
-            return false;
+            alert("Could not create the directory '" + saveDir.path + "'");
+            return null;
           }
         }
-        else if (this.saveDir.isDirectory())
+        else if (saveDir.isDirectory())
         {
           break;
         }
-
       }
     }
-    return true;
-    
+    return saveDir;
   },
 
-  onFlickrUpdate: function(event)
+  flickrUpdate: function(status, method, data)
   {
-    Application.console.log("FlickrUpdate data received: Status: " + event.status + "Method: " + event.method + " Data: " + event.data);
+    Application.console.log("FlickrUpdate data received for method: " + method);
+    if (!status)
+    {
+      Application.console.log("Failed to get a result for method " + method + "\n" + data);
+      return;
+    }
+    switch (method)
+    {
+    case "flickr.photosets.getInfo":
+      if (data.stat && data.stat == "fail")
+      {
+        Application.console.log("Failed to get information for this set: " + method);
+        break;
+      }
+      var baseSaveDir = FlickrDownloadManager.getBaseSaveDir();
+      if (!baseSaveDir)
+      {
+        Application.console.log("Choosing saving directory has been canceled");
+        break;
+      }
+      var saveDir = FlickrDownloadManager.createSaveDir(baseSaveDir, data.photoset.title._content);
+      if (!saveDir)
+      {
+        Application.console.log("Failed to create save directory");
+        break;
+      }
+      // save the data
+      this.setData[data.photoset.id] = {title:data.photoset.title._content, saveDirectory:saveDir};
+      break;
+    default:
+      Application.console.log("Got a flickr update for an unknown method: " + method);
+    }
   },
+
+  getBaseSaveDir: function()
+  {
+    // get the output directory to save the files to
+    var nsIFilePicker = Components.interfaces.nsIFilePicker;
+    var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
+    fp.init(window, "Save images to...", nsIFilePicker.modeGetFolder);
+
+    // get the previously used dir from preferences
+    var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                    .getService(Components.interfaces.nsIPrefService);
+    prefs = prefs.getBranch("extensions.FlickrGetSet.");
+    try
+    {
+      var saveDir = prefs.getComplexValue("saveDir", Components.interfaces.nsILocalFile);
+      fp.displayDirectory = saveDir;
+    } catch (e){}
+
+    if (fp.show() != nsIFilePicker.returnOK)
+    {
+      return null;
+    }
+    // save the chosen directory
+    prefs.setComplexValue("saveDir",
+                          Components.interfaces.nsILocalFile, fp.file);
+    return fp.file;
+  }
 
   downloadNextImage: function()
   {

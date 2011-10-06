@@ -14,9 +14,4 @@
   <separator class="groove" orientation="horizontal"/>
   <label id="totalLabel" value="Total progress"/>
   <progressmeter id="totalProgress" mode="determined"/>
-  <label id="flickrEventSender" hidden="true" />
-  <script src="chrome://FlickrGetSet/content/sha1.js"/>
-  <script src="chrome://FlickrGetSet/content/oauth.js"/>
-  <script src="chrome://FlickrGetSet/content/flickrOauthWrapper.js"/>
-  <script src="chrome://FlickrGetSet/content/downloadDialog.js"/>
 </dialog>

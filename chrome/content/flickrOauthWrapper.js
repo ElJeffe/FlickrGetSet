@@ -25,7 +25,7 @@ var FlickrOAuth; if (FlickrOAuth == null) FlickrOAuth = {
       {
         Application.console.log("Not authentication needed");
         this.authenticationNeeded = false;
-        autheticateCb(true);
+        autheticateCb(true, userName);
         return;
       }
       var authenticationTokenList = FlickrOAuth.getAuthToken(userName);
@@ -39,7 +39,7 @@ var FlickrOAuth; if (FlickrOAuth == null) FlickrOAuth = {
         if (FlickrOAuth.testLogin())
         {
           Application.console.log("token is ok");
-          autheticateCb(true);
+          autheticateCb(true, userName);
           return;
         }
         else
@@ -57,7 +57,7 @@ var FlickrOAuth; if (FlickrOAuth == null) FlickrOAuth = {
       if (!result)
       {
         Application.console.log("Failed to get a request token");
-        autheticateCb(false);
+        autheticateCb(false, userName);
         return;
       }
       // save the token and token secret
@@ -80,7 +80,7 @@ var FlickrOAuth; if (FlickrOAuth == null) FlickrOAuth = {
       if (!status)
       {
         Application.console.log("Verification was canceled by user");
-        this.authenticateCb(false);
+        this.authenticateCb(false, userName);
         return;
       }
 
@@ -90,7 +90,7 @@ var FlickrOAuth; if (FlickrOAuth == null) FlickrOAuth = {
       if (!result)
       {
         Application.console.log("Failed to get the access token");
-        this.authenticateCb(false);
+        this.authenticateCb(false, userName);
         return;
       }
       var userId = result["user_nsid"];
@@ -103,7 +103,7 @@ var FlickrOAuth; if (FlickrOAuth == null) FlickrOAuth = {
         Application.console.log("Authorization failed");
         this.token = null;
         this.tokenSecret = null;
-        this.authenticateCb(false);
+        this.authenticateCb(false, userName);
         return;
       }
       // save the access token
@@ -112,7 +112,7 @@ var FlickrOAuth; if (FlickrOAuth == null) FlickrOAuth = {
       FlickrOAuth.saveAuthToken(userName, this.token, this.tokenSecret);
 
       // test if the login is ok
-      this.authenticateCb(FlickrOAuth.testLogin());
+      this.authenticateCb(FlickrOAuth.testLogin(), userName);
     },
 
     testLogin: function()

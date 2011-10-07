@@ -41,31 +41,10 @@ var FlickrDownloadManager; if (FlickrDownloadManager == null) FlickrDownloadMana
   init: function() 
   {
     this.setData = {};
+    this.isDownloading = false;
+    this.currentDownloadSet = null;
+    this.downloadDialog = null;
     FlickrOAuth.setFlickrUpdateCb(function(s, m, d) {FlickrDownloadManager.flickrUpdate(s, m, d)});
-
-    //FlickrDownloadManager.authorizeFlickr();
-    return;
-    if (this.setTitle != null)
-    {
-      alert("A set is already being downloaded: " + this.setTitle);
-      return;
-    }
-    this.saveDir = window.arguments[0];
-    this.setTitle = window.arguments[1];
-    this.photoIds = window.arguments[2];
-    this.photoIdx = 0;
-    this.request = null;
-
-    // create directory to save to
-    if (! FlickrDownloadManager.createSaveDir())
-    {
-      window.close();
-      return false;
-    }
-
-    FlickrDownloadManagerListener.init();
-
-    FlickrDownloadManager.downloadNextImage();
     return;
   },
 
@@ -73,71 +52,41 @@ var FlickrDownloadManager; if (FlickrDownloadManager == null) FlickrDownloadMana
   {
     this.setId = setId;
     this.userName = userName;
-    FlickrOAuth.authenticate(userName, function(status) {FlickrDownloadManager.authenticateCb(status)});
-    // get photos
-    // FlickrOAuth.flickrCallMethod("flickr.photosets.getPhotos", {photoset_id:"72157627601593559", extras:"url_sq,url_z,url_l,url_o"});
+    FlickrOAuth.authenticate(userName, function(status, userName) {FlickrDownloadManager.authenticateCb(status, userName)});
   },
 
-  authenticateCb: function(status)
+  authenticateCb: function(status, userName)
   {
-    Application.console.log("SetId: " + this.setId);
     if (!status)
     {
       alert("Authentication failed");
       return;
     }
+
+    if (userName)
+    {
+      // save as default user if none exists
+      var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                      .getService(Components.interfaces.nsIPrefService);
+      prefs = prefs.getBranch("extensions.FlickrGetSet.");
+
+      var defaultUser = null;
+      try
+      {
+        defaultUser = prefs.getCharPref("defaultUser");
+      } catch (e)
+      {
+        defaultUser = null;
+      }
+      if (!defaultUser)
+      {
+        prefs.setCharPref("defaultUser", userName);
+      }
+    }
+
     FlickrOAuth.flickrCallMethod("flickr.photosets.getInfo", {photoset_id:this.setId});
   },
   
-  createSaveDir: function(baseSaveDir, setName) 
-  {
-    if (!baseSaveDir.isDirectory())
-    {
-      alert("The chosen directory does not exist! " + this.saveDir.path);
-      return null;
-    }
-    var saveDir = baseSaveDir.clone();
-    saveDir.append(setName);
-    if (!saveDir.exists())
-    {
-      try
-      {
-        saveDir.create(saveDir.DIRECTORY_TYPE, 0775);
-      } catch (e)
-      {
-        Application.console.log("Error message: " + e.message);
-        alert("Could not create the directory '" + saveDir.path + "'");
-        return null;
-      }
-    }
-    else if (!saveDir.isDirectory())
-    {
-      for (var i = 1; i < 1000; i++)
-      {
-        saveDir = baseSaveDir.clone();
-        saveDir.append(this.setTitle +'_' + i);
-        if (!this.saveDir.exists())
-        {
-          try
-          {
-            saveDir.create(saveDir.DIRECTORY_TYPE, 0775);
-            break;
-          } catch (e)
-          {
-            Application.console.log("Error message: " + e.message);
-            alert("Could not create the directory '" + saveDir.path + "'");
-            return null;
-          }
-        }
-        else if (saveDir.isDirectory())
-        {
-          break;
-        }
-      }
-    }
-    return saveDir;
-  },
-
   flickrUpdate: function(status, method, data)
   {
     Application.console.log("FlickrUpdate data received for method: " + method);
@@ -193,27 +142,145 @@ var FlickrDownloadManager; if (FlickrDownloadManager == null) FlickrDownloadMana
 
   },
 
-  handleSetInfo: function(data)
+  handleSetPhotos: function(data)
   {
+    if (!data.photoset.photo)
+    {
+      alert("No photos could be retreived for the set");
+      delete this.setData[data.photoset.id];
+      return;
+    }
+    var photoList = [];
+    // temp map to be sure that photo names are unique
+    var photoNames = {};
+    // add all photo info to a list
+    for (var i = 0; i < data.photoset.photo.length; ++i)
+    {
+      var photo = data.photoset.photo[i];
+      var photoName = photo.title;
+      if (photoNames.hasOwnProperty(photoName))
+      {
+        var counter = 1;
+        var newName = photoName + "_" + counter;
+        while (photoNames.hasOwnProperty(newName))
+        {
+          counter++;
+          newName = photoName + "_" + counter;
+        }
+        photoName = newName;
+      }
+      photoNames[photoName] = 1;
+      var photoData = new Object();
+      photoData.name = photoName;
+      photoData.sqUrl = photo.url_sq;
+      // get the biggest photo
+      if (photo.url_o)
+      {
+        photoData.bigUrl = photo.url_o;
+      }
+      else if (photo.url_l)
+      {
+        photoData.bigUrl = photo.url_l;
+      }
+      else if (photo.url_z)
+      {
+        photoData.bigUrl = photo.url_z;
+      }
+      if (photoData.bigUrl)
+      {
+        photoList.push(photoData);
+      }
+      else
+      {
+        Application.console.log("Could not find a big url for " + photoName);
+      }
+    }
+    if (photoList.length == 0)
+    {
+      alert("No high quality photos could be found for this set");
+      delete this.setData[data.photoset.id];
+      return;
+    }
+    this.setData[data.photoset.id].photoList = photoList;
+    FlickrDownloadManager.addSetToGui(data.photoset.id);
+  },
+
+  createSaveDir: function(baseSaveDir, setName) 
+  {
+    if (!baseSaveDir.isDirectory())
+    {
+      alert("The chosen directory does not exist! " + this.saveDir.path);
+      return null;
+    }
+    var saveDir = baseSaveDir.clone();
+    saveDir.append(setName);
+    if (!saveDir.exists())
+    {
+      try
+      {
+        saveDir.create(saveDir.DIRECTORY_TYPE, 0775);
+      } catch (e)
+      {
+        Application.console.log("Error message: " + e.message);
+        alert("Could not create the directory '" + saveDir.path + "'");
+        return null;
+      }
+    }
+    else if (!saveDir.isDirectory())
+    {
+      for (var i = 1; i < 1000; i++)
+      {
+        saveDir = baseSaveDir.clone();
+        saveDir.append(this.setTitle +'_' + i);
+        if (!this.saveDir.exists())
+        {
+          try
+          {
+            saveDir.create(saveDir.DIRECTORY_TYPE, 0775);
+            break;
+          } catch (e)
+          {
+            Application.console.log("Error message: " + e.message);
+            alert("Could not create the directory '" + saveDir.path + "'");
+            return null;
+          }
+        }
+        else if (saveDir.isDirectory())
+        {
+          break;
+        }
+      }
+    }
+    return saveDir;
   },
 
   getBaseSaveDir: function()
   {
-    // get the output directory to save the files to
-    var nsIFilePicker = Components.interfaces.nsIFilePicker;
-    var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
-    fp.init(window, "Save images to...", nsIFilePicker.modeGetFolder);
-
+    // get the previous save dir
+    var prevSaveDir = null;
     // get the previously used dir from preferences
     var prefs = Components.classes["@mozilla.org/preferences-service;1"]
                     .getService(Components.interfaces.nsIPrefService);
     prefs = prefs.getBranch("extensions.FlickrGetSet.");
     try
     {
-      var saveDir = prefs.getComplexValue("saveDir", Components.interfaces.nsILocalFile);
-      fp.displayDirectory = saveDir;
+      prevSaveDir = prefs.getComplexValue("saveDir", Components.interfaces.nsILocalFile);
     } catch (e){}
 
+    if (prevSaveDir)
+    {
+      return prevSaveDir;
+    }
+
+    // get the output directory to save the files to
+    var nsIFilePicker = Components.interfaces.nsIFilePicker;
+    var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
+    fp.init(window, "Save images to...", nsIFilePicker.modeGetFolder);
+
+    if (prevSaveDir)
+    {
+      fp.displayDirectory = prevSaveDir;
+    }
     if (fp.show() != nsIFilePicker.returnOK)
     {
       return null;
@@ -224,7 +291,133 @@ var FlickrDownloadManager; if (FlickrDownloadManager == null) FlickrDownloadMana
     return fp.file;
   },
 
+  startDownloading: function()
+  {
+    if (this.isDownloading)
+    {
+      Application.console.log("Downloading process is already busy");
+      return;
+    }
+    this.isDownloading = true;
+    FlickrDownloadManager.downloadNextImage();
+  },
+
+  stopDownloading: function()
+  {
+    Application.console.log("Stop downloading");
+    this.isDownloading = false;
+  },
+
   downloadNextImage: function()
+  {
+    for (var setId in this.setData) {
+      Application.console.log("SetId: " + setId);
+    }
+
+    if (!this.currentDownloadSet || !this.setData.hasOwnProperty(this.currentDownloadSet))
+    {
+      // is there a better way to get the first element from the properties list?
+      this.currentDownloadSet = null;
+      for (var setId in this.setData)
+      {
+        this.currentDownloadSet = setId;
+        break;
+      }
+      if (!this.currentDownloadSet)
+      {
+        // no more sets to download
+        FlickrDownloadManager.stopDownloading();
+        return;
+      }
+
+    }
+    if (this.setData[this.currentDownloadSet].photoList.length == 0)
+    {
+      Application.console.log("No more photos to download for set " + this.currentDownloadSet);
+      delete this.setData[this.currentDownloadSet];
+      this.currentDownloadSet = null;
+      FlickrDownloadManager.downloadNextImage();
+      return;
+    }
+    var photoToDownload = this.setData[this.currentDownloadSet].photoList.pop();
+
+    Application.console.log("Download image  " + photoToDownload.name);
+    // create the filename
+    var origExt = /[a-zA-Z0-9]+$/.exec(photoToDownload.bigUrl)[0];
+    Application.console.log("origExt:" + origExt);
+
+    var targetFile = this.setData[this.currentDownloadSet].saveDirectory.clone();
+    targetFile.append(photoToDownload.name+"."+origExt);
+    if (targetFile.exists())
+    {
+      Application.console.log("The image already exists. Skip downloading. " + targetFile.path);
+      FlickrDownloadManager.downloadNextImage();
+      return;
+    }
+    // create the file
+    targetFile.create(targetFile.NORMAL_FILE_TYPE, 0644);
+
+    FlickrDownloadManager.downloadNextImage();
+  },
+
+  addSetToGui: function(setId)
+  {
+    if (!this.downloadDialog || this.downloadDialog.closed)
+    {
+      // open the download dialog
+      this.downloadDialog = window.openDialog("chrome://flickrgetset/content/downloadDialog.xul",
+                          "download-set-dialog", "chrome,centerscreen,resizable=yes");
+      this.downloadDialog.addEventListener("load", function(e) {FlickrDownloadManager.onDownloadDialogLoad(setId);}, true);
+    }
+    else
+    {
+      this.downloadDialog.focus();
+      FlickrDownloadManager.onDownloadDialogLoad();
+    }
+  },
+
+  onDownloadDialogLoad: function(setId)
+  {
+    var doc = this.downloadDialog.document;
+    var setContainer = doc.getElementById("setContainer");
+    if (!setContainer)
+    {
+      alert("Failed to build the dialog because the image container was not present");
+      return;
+    }
+
+    var setEl = doc.createElement("label");
+    setEl.setAttribute("value", this.setData[setId].title);
+    setEl.setAttribute("class", "header");
+    setContainer.appendChild(setEl);
+
+    var imageContainer = doc.createElement("box");
+    imageContainer.setAttribute("align", "start");
+    imageContainer.setAttribute("style", "display:block");
+    imageContainer.setAttribute("flex", "1");
+
+    for each (var photo in this.setData[setId].photoList)
+    {
+      var imageBox = doc.createElement("vbox");
+      imageBox.setAttribute("align", "center");
+
+      var imageEl = doc.createElement("image");
+      imageEl.setAttribute("src", photo.sqUrl);
+      imageBox.appendChild(imageEl);
+
+      var imageProgress = doc.createElement("progressmeter");
+      imageProgress.setAttribute("mode", "determined");
+      imageProgress.setAttribute("style","min-width:75px;");
+      imageBox.appendChild(imageProgress);
+
+      imageContainer.appendChild(imageBox);
+    }
+    setContainer.appendChild(imageContainer);
+
+    // FlickrDownloadManager.startDownloading();
+  },
+
+  downloadNextImage_: function()
   {
     var totalProgress = document.getElementById("totalProgress");
     totalProgress.setAttribute("max", this.photoIds.length);
@@ -438,91 +631,6 @@ var FlickrDownloadManager; if (FlickrDownloadManager == null) FlickrDownloadMana
       }
     };  
     request.send(null); 
-  },
-
-  authorizeFlickr: function() {
-    Application.console.log('Authorize flickr');
-    var url = "http://www.flickr.com/services/oauth/request_token";
-    var accessor = {
-      //token: "",
-      //tokenSecret: "",
-     consumerKey : "fb83db48de20585d51c21052562dc3ae",
-      consumerSecret: "4cafb2345ff39878"
-    };
-
-    var message = {
-      action: url,
-      method: "GET",
-      parameters: [
-        ["oauth_signature_method", "HMAC-SHA1"],
-        ["oauth_version", "1.0"],
-      ["oauth_callback", "http%3A%2F%2Fwww.cloudscratcher.be"]
-//    ["oauth_nonce", "89601180"],
-//    ["oauth_timestamp", "1305583298"],
-//    ["oauth_consumer_key", "653e7a6ecc1d528c516cc8f92cf98611"]
-
-      ]
-    };
-
-    OAuth.completeRequest(message, accessor);
-//  OAuth.setParameter(message, "oauth_nonce", "89601180");
-//  OAuth.setParameter(message, "oauth_timestamp", "1305583298");
-//  OAuth.setParameter(message, "oauth_consumer_key", "653e7a6ecc1d528c516cc8f92cf98611");
-//
-//  OAuth.SignatureMethod.sign(message, accessor);
-//  return;
-//  Application.console.log("Base string: " + OAuth.SignatureMethod.getBaseString(message));
-    for (var p in message.parameters) {  
-            Application.console.log(p + ':' + message.parameters[p]);
-    } 
-//  return;
-//  for (var p = 0; p < message.parameters.length; ++p) {
-//    if (message.parameters[p][0] == "oauth_signature")
-//    {
-//      message.parameters.splice(p, 1)
-//    }
-//  }
-//
-//
-//
-//  message.parameters = message.parameters.sort();
-//
-//  // sign agian with the sorted parameters
-//  OAuth.SignatureMethod.sign(message, accessor);
-//  for (var p in message.parameters) {
-//          Application.console.log(p + ':' + message.parameters[p]);
-//  }
-//  Application.console.log("Base string: " + OAuth.SignatureMethod.getBaseString(message));
-
-
-    url = url + '?' + OAuth.formEncode(message.parameters);
-    Application.console.log(url);
-    var request = new XMLHttpRequest();  
-    request.open('GET', url, false);
-    request.send(null);
-
-    if (request.status == 200)
-    {
-      Application.console.log(request.responseText);
-      var result = OAuth.getParameterMap(request.responseText);
-      for (var p in result) 
-      {  
-         Application.console.log(p + ':' + result[p]);
-      }
-      
-      accessor["token"] = result["oauth_token"];
-      accessor["tokenSecret"] = result["oauth_token_secret"];
-      message["action"] = "http://www.flickr.com/services/oauth/authorize";
-
-      var authorizeUrl="http://www.flickr.com/services/oauth/authorize?oauth_token="+result["oauth_token"]+"&perms=read";
-      Application.console.log(authorizeUrl);
-    }
-    else
-    {
-      Application.console.log("Status: " + request.status);
-      Application.console.log(request.responseText);
-    }
-
   },
 
   exit: function() {

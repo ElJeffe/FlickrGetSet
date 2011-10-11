@@ -13,9 +13,14 @@ var flickrHook = {
     var doc = aEvent.originalTarget; // doc is document that triggered "onload" event  
     if (!/.*flickr\.com\/.*\/sets\/\d+.*/.test(doc.location.href))
     {
-
+      var Test = {};
+      Components.utils.import("chrome://flickrgetset/content/test.jsm", Test);
+      Application.console.log("value: " + Test.getValue());
+      Test.setValue(Test.getValue() + 1);
+      Application.console.log("value: " + Test.getValue());
       if (/.*www\.steelant\.be.*/.test(doc.location.href))
       {
+
         FlickrDownloadManager.downloadSet("72157627601593559", "ElJeffe");
 //    window.openDialog("chrome://flickrgetset/content/downloadDialog.xul",
 //                        "download-set-dialog-"+this.counter, "chrome,centerscreen", "test", "test", new Array());

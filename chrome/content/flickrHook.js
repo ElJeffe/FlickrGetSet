@@ -14,20 +14,18 @@ var flickrHook = {
     if (!/.*flickr\.com\/.*\/sets\/\d+.*/.test(doc.location.href))
     {
 
-      if (/.*www\.steelant\.be.*/.test(doc.location.href))
-      {
-        FlickrDownloadManager.downloadSet("72157627601593559", "ElJeffe");
-//    window.openDialog("chrome://flickrgetset/content/downloadDialog.xul",
-//                        "download-set-dialog-"+this.counter, "chrome,centerscreen", "test", "test", new Array());
-      }
+//      if (/.*www\.steelant\.be.*/.test(doc.location.href))
+//      {
+//        FlickrDownloadManager.downloadSet("72157627601593559", "ElJeffe");
+//      }
       return;
     }
     Application.console.log("Flickr set loaded");
-    elements = doc.getElementsByClassName("share-this-wrapper");
+    var elements = doc.getElementsByClassName("share-this-wrapper");
 
     if (elements.length > 0)
     {
-      list = elements[0].firstElementChild;
+      var list = elements[0].firstElementChild;
       
       var listItem = document.createElement("li");
       listItem.setAttribute("style", "margin-right: 0.5em;");
@@ -41,43 +39,20 @@ var flickrHook = {
       
       list.insertBefore(listItem, list.firstElementChild);
     }
-
-    // add event listener for page unload   
-    aEvent.originalTarget.defaultView.addEventListener("unload", function(event){ flickrHook.onPageUnload(event);}, true);  
   },
   
   onDownloadSet: function(aEvent, doc) {
-
-    var setTitle = flickrHook.getSetTitle(doc);
-    var photoIds = flickrHook.getPhotoIds(doc);
-
-    // get the output directory to save the files to
-    var nsIFilePicker = Components.interfaces.nsIFilePicker;
-    var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
-    fp.init(window, "Save images to...", nsIFilePicker.modeGetFolder);
-
-    // get the previously used dir from preferences
-    var prefs = Components.classes["@mozilla.org/preferences-service;1"]
-                    .getService(Components.interfaces.nsIPrefService);
-    prefs = prefs.getBranch("extensions.FlickrGetSet.");
-    try
+    var userName = flickrHook.getUserName(doc);
+    // get setId
+    var res = /.*flickr\.com\/.*\/sets\/(\d+).*/.exec(doc.location.href);
+    var setId = res[1];
+    if (!setId)
     {
-      var saveDir = prefs.getComplexValue("saveDir", Components.interfaces.nsILocalFile);
-      fp.displayDirectory = saveDir;
-    } catch (e){}
-
-    if (fp.show() != nsIFilePicker.returnOK)
-    {
+      alert("Dailed to detirmine the Set ID from the url");
       return;
     }
-    // save the chosen directory
-    prefs.setComplexValue("saveDir",
-                          Components.interfaces.nsILocalFile, fp.file);
-
-    // open the download dialog
-    window.openDialog("chrome://flickrgetset/content/downloadDialog.xul",  
-                        "download-set-dialog-"+this.counter, "chrome,centerscreen", fp.file, setTitle, photoIds);
-    this.counter++;
+    Application.console.log("setid: " + setId + " User name: " + userName);
+    FlickrDownloadManager.downloadSet(setId, userName);
   },
 
   getPhotoIds: function(doc) {
@@ -99,16 +74,21 @@ var flickrHook = {
     return photoIds;
   },
 
-  getSetTitle: function(doc) {
-    var titleElements = doc.getElementsByClassName("set-title");
-    if (titleElements.length == 0)
+  getUserName: function(doc)
+  {
+    var headStatus = doc.getElementById("head-status");
+    if (!headStatus)
     {
-      return "";
+      return null;
     }
-    return titleElements[0].textContent.trim();
-  },
-  
-  onPageUnload: function(aEvent) {  
-    // do something  
-  }  
+    var aElements = headStatus.getElementsByTagName("a");
+    for (var i = 0; i < aElements.length; ++i)
+    {
+      if (aElements[i].hasAttribute("data-track") && 
+          (aElements[i].getAttribute("data-track") == "account"))
+      {
+        return aElements[i].textContent.trim();
+      }
+    }
+  }
 }  

@@ -60,6 +60,7 @@ var FlickrOAuth; if (FlickrOAuth == null) FlickrOAuth = {
         autheticateCb(false, userName);
         return;
       }
+      return;
       // save the token and token secret
       this.token = result["oauth_token"];
       this.tokenSecret = result["oauth_token_secret"];

@@ -384,6 +384,8 @@ OAuth.setProperties(OAuth.SignatureMethod.prototype, // instance members
         }
         this.key = OAuth.percentEncode(consumerSecret)
              +"&"+ OAuth.percentEncode(accessor.tokenSecret);
+        Services.console.logStringMessage("Save Key: " + this.key);
+
     }
 });
 

@@ -14,10 +14,10 @@ var flickrHook = {
     if (!/.*flickr\.com\/.*\/sets\/\d+.*/.test(doc.location.href))
     {
 
-//      if (/.*www\.steelant\.be.*/.test(doc.location.href))
-//      {
-//        FlickrDownloadManager.downloadSet("72157627601593559", "ElJeffe");
-//      }
+      if (/.*www\.steelant\.be.*/.test(doc.location.href))
+      {
+        FlickrDownloadManager.downloadSet("72157627601593559", "ElJeffe");
+      }
       return;
     }
     Application.console.log("Flickr set loaded");

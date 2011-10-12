@@ -26,12 +26,10 @@ function setFlickrUpdateCb(cb)
 
 function authenticate(userName, authCb)
 {
-  authCb(true, userName);
   // make sure that the token is null
   token = null;
   tokenSecret = null;
   authenticateCb = authCb;
-  authenticateCb(true, "twee");
 
   if (!userName)
   {
@@ -79,7 +77,8 @@ function authenticate(userName, authCb)
   // request authorization
   var authorizeUrl="http://www.flickr.com/services/oauth/authorize?oauth_token="+result["oauth_token"]+"&perms=read";
   var params = {url:authorizeUrl};
-  //var params = {url:authorizeUrl, verifCallback:this.setVerificationCode};
+  var params = {url:authorizeUrl, verifCallback:setVerificationCode};
+  var window = Services.wm.getMostRecentWindow(null);
   window.openDialog("chrome://flickrgetset/content/authenticateDialog.xul",  
                     "authenticate-dialog", "chrome,centerscreen,dialog", params);
 
@@ -98,7 +97,7 @@ function setVerificationCode(verificationCode, status)
 
   // exchange the request token for an access token
 
-  var result = FlickrOAuth.flickrCall("http://www.flickr.com/services/oauth/access_token",{oauth_verifier:verificationCode}, false, false);
+  var result = flickrCall("http://www.flickr.com/services/oauth/access_token",{oauth_verifier:verificationCode}, false, false);
   if (!result)
   {
     logError("Failed to get the access token");

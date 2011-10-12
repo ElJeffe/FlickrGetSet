@@ -17,6 +17,9 @@ var EXPORTED_SYMBOLS = ["Sha1"];
 
 var Sha1 =
 {
+  set_b64pad: set_b64pad,
+  set_hexcase: set_hexcase,
+  set_chrsz: set_chrsz,
   hex_sha1: hex_sha1,
   b64_sha1: b64_sha1,
   str_sha1: str_sha1,
@@ -28,6 +31,22 @@ var Sha1 =
 var hexcase = 0;  /* hex output format. 0 - lowercase; 1 - uppercase        */
 var b64pad  = ""; /* base-64 pad character. "=" for strict RFC compliance   */
 var chrsz   = 8;  /* bits per input character. 8 - ASCII; 16 - Unicode      */
+
+function set_b64pad(value)
+{
+  b64pad = value;
+}
+
+function set_hexcase(value)
+{
+  hexcase = value;
+}
+
+function set_chrsz(value)
+{
+  chrsz = value;
+}
+
 
 /*
  * These are the functions you'll usually want to call

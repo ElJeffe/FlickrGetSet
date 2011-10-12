@@ -11,17 +11,6 @@ var authenticateDialog =
     var mainWindow = wm.getMostRecentWindow("navigator:browser");
     this.tab = mainWindow.gBrowser.addTab(url);
     mainWindow.gBrowser.selectedTab = this.tab;
-    this.tab.addEventListener("load", function(e) {authenticateDialog.onPageLoad();}, true);
-  },
-
-  onPageLoad: function()
-  {
-    var doc = this.tab.document;
-    var mainElement = doc.getElementById("Main");
-    if (mainElement)
-    {
-      Application.console.log("Main element found: " + mainElement.innerHTML);
-    }
   },
 
   onOk: function()

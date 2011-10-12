@@ -4,11 +4,10 @@
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   buttons="cancel"
   buttonlabelcancel="Cancel"
-  width="300"
-  height="200">
+  ondialogcancel="return downloadDialog.onCancel();"
+  width="500"
+  height="400">
   <vbox id="setContainer" style="overflow:auto" flex="1">
   </vbox>
-  <separator class="groove" orientation="horizontal"/>
-  <label id="totalLabel" value="Total progress"/>
-  <progressmeter id="totalProgress" mode="determined"/>
-</dialog>
+  <script src="chrome://FlickrGetSet/content/downloadDialog.js"/>
+  </dialog>

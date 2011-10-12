@@ -73,6 +73,7 @@
 var EXPORTED_SYMBOLS = ["OAuth"];
 
 Components.utils.import("chrome://flickrgetset/content/sha1.jsm");
+Components.utils.import("resource://gre/modules/Services.jsm");
 
 
 var OAuth; if (OAuth == null) OAuth = {};
@@ -304,6 +305,8 @@ OAuth.setProperties(OAuth, // utility functions
 ,
     /** Correct the time using a parameter from the URL from which the last script was loaded. */
     correctTimestampFromSrc: function correctTimestampFromSrc(parameterName) {
+    Services.console.logStringMessage("Correct timestamp");
+
         parameterName = parameterName || "oauth_timestamp";
         var scripts = document.getElementsByTagName('script');
         if (scripts == null || !scripts.length) return;
@@ -388,6 +391,8 @@ OAuth.setProperties(OAuth.SignatureMethod.prototype, // instance members
         }
         this.key = OAuth.percentEncode(consumerSecret)
              +"&"+ OAuth.percentEncode(accessor.tokenSecret);
+        Services.console.logStringMessage("Save Key: " + this.key);
+
     }
 });
 
@@ -546,6 +551,7 @@ OAuth.SignatureMethod.registerMethodClass(["HMAC-SHA1", "HMAC-SHA1-Accessor"],
         function getSignature(baseString) {
             b64pad = '=';
             var signature = Sha1.b64_hmac_sha1(this.key, baseString);
+            Services.console.logStringMessage("Key: " + this.key + "\nBaseString: " + baseString + "\nSignature: " + signature);
             return signature;
         }
     ));

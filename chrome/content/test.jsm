@@ -17,6 +17,6 @@ function getValue()
 
 function setValue(newVal)
 {
-  Services.prompt.alert(null, "error", "Set new value: " + newVal);
+  //Services.prompt.alert(null, "error", "Set new value: " + newVal);
   value = newVal;
 }

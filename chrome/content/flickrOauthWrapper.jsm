@@ -144,8 +144,8 @@ function flickrCallMethod(method, extraParams)
 function flickrCall(url, extraParams, returnJson, async)
 {
   var accessor = {
-    consumerKey : this.consumerKey,
-    consumerSecret: this.consumerSecret
+    consumerKey : consumerKey,
+    consumerSecret: consumerSecret
   };
 
   if (token)
@@ -160,10 +160,10 @@ function flickrCall(url, extraParams, returnJson, async)
   var message = {
     action: url,
     method: "GET",
-    parameters: [
-                ["oauth_signature_method", "HMAC-SHA1"],
-                ["oauth_version", "1.0"]
-                ]
+    parameters: {
+                  oauth_signature_method: "HMAC-SHA1",
+                  oauth_version: "1.0"
+    }
   };
   if (extraParams)
   {
@@ -181,6 +181,11 @@ function flickrCall(url, extraParams, returnJson, async)
 
   OAuth.completeRequest(message, accessor);
 
+  for (p in message.parameters)
+  {
+    log(" " + p + " : " +  message.parameters[p])
+  }
+
   var url = message["action"] + '?' + OAuth.formEncode(message.parameters);
   log(url);
   var request = Components.classes["@mozilla.org/xmlextras/xmlhttprequest;1"]
@@ -188,7 +193,6 @@ function flickrCall(url, extraParams, returnJson, async)
   if (async)
   {
     request.open('GET', url, false);
-    var flickrUpdateCb = this.flickrUpdateCb;
     request.onreadystatechange = function ()
     {
       if (request.readyState == 4)

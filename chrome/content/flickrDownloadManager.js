@@ -24,8 +24,6 @@ var FlickrDownloadManager; if (FlickrDownloadManager == null) FlickrDownloadMana
 
     authenticateCb: function(status, userName)
     {
-      Application.console.log("Authcallback called: Status: " + status + " user: " + userName);
-      return
       if (!status)
       {
         alert("Authentication failed");

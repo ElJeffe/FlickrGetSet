@@ -8,6 +8,7 @@ var FlickrOAuth =
 {
   setFlickrUpdateCb: setFlickrUpdateCb,
   authenticate: authenticate,
+  flickrCallMethod: flickrCallMethod,
 }
 
 // global variables
@@ -35,7 +36,7 @@ function authenticate(userName, authCb)
   {
     log("Not authentication needed");
     authenticationNeeded = false;
-    autheticateCb(true, userName);
+    authenticateCb(true, userName);
     return;
   }
   var authenticationTokenList = getAuthToken(userName);
@@ -49,7 +50,7 @@ function authenticate(userName, authCb)
     if (testLogin())
     {
       log("token is ok");
-      autheticateCb(true, userName);
+      authenticateCb(true, userName);
       return;
     }
     else
@@ -67,7 +68,7 @@ function authenticate(userName, authCb)
   if (!result)
   {
     logError("Failed to get a request token");
-    autheticateCb(false, userName);
+    authenticateCb(false, userName);
     return;
   }
   // save the token and token secret
@@ -180,13 +181,7 @@ function flickrCall(url, extraParams, returnJson, async)
 
   OAuth.completeRequest(message, accessor);
 
-  for (p in message.parameters)
-  {
-    log(" " + p + " : " +  message.parameters[p])
-  }
-
   var url = message["action"] + '?' + OAuth.formEncode(message.parameters);
-  log(url);
   var request = Components.classes["@mozilla.org/xmlextras/xmlhttprequest;1"]
                      .createInstance(Components.interfaces.nsIXMLHttpRequest);
   if (async)

@@ -1,8 +1,12 @@
 
-var EXPORTED_SYMBOLS = ["getValue", "setValue"];
+var EXPORTED_SYMBOLS = ["getValue", "setValue", "Interface"];
 
 Components.utils.import("resource://gre/modules/Services.jsm");
 
+var Interface =
+{
+  getValue: getValue, 
+}
 var value = 0;
 
 function getValue()

@@ -70,6 +70,10 @@
 
    Another option is to call OAuth.correctTimestamp with a Unix timestamp.
  */
+var EXPORTED_SYMBOLS = ["OAuth"];
+
+Components.utils.import("chrome://flickrgetset/content/sha1.jsm");
+
 
 var OAuth; if (OAuth == null) OAuth = {};
 
@@ -541,11 +545,7 @@ OAuth.SignatureMethod.registerMethodClass(["HMAC-SHA1", "HMAC-SHA1-Accessor"],
     OAuth.SignatureMethod.makeSubclass(
         function getSignature(baseString) {
             b64pad = '=';
-//          baseString = "GET&http%3A%2F%2Fwww.flickr.com%2Fservices%2Foauth%2Frequest_token&oauth_callback%3Dhttp%253A%252F%252Fwww.example.com%26oauth_consumer_key%3D653e7a6ecc1d528c516cc8f92cf98611%26oauth_nonce%3D95613465%26oauth_signature_method%3DHMAC-SHA1%26oauth_timestamp%3D1305586162%26oauth_version%3D1.0";
-//          this.key="653e7a6ecc1d528c516cc8f92cf98611";
-            Application.console.log("Signing\nBase String:\n"+baseString+"\nKey: " + this.key);
-            var signature = b64_hmac_sha1(this.key, baseString);
-            Application.console.log("Signature: " + signature);
+            var signature = Sha1.b64_hmac_sha1(this.key, baseString);
             return signature;
         }
     ));

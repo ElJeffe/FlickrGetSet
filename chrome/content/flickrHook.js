@@ -18,9 +18,9 @@ var flickrHook = {
       Application.console.log("value: " + Test.getValue());
       Test.setValue(Test.getValue() + 1);
       Application.console.log("value: " + Test.getValue());
+      Application.console.log("ivalue: " + Test.Interface.getValue());
       if (/.*www\.steelant\.be.*/.test(doc.location.href))
       {
-
         FlickrDownloadManager.downloadSet("72157627601593559", "ElJeffe");
       }
       return;

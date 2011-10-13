@@ -11,6 +11,7 @@ var FlickrDownloadManager =
   setPauze: setPauze,
 }
 
+// global variables
 var setData = {};
 var isDownloading = false;
 var currentDownloadSet;
@@ -18,9 +19,15 @@ var downloadDialog;
 var simultaniousDownloads = 4;
 
 
+/**
+ * Initialize 
+ *  
+ * Callback functions for the FlickrOAUth wrapper are set here 
+ * 
+ * @author jef (10/13/2011)
+ */
 function init() 
 {
-  log("init");
   FlickrOAuth.setFlickrUpdateCb(function(s, m, d, o){flickrUpdate(s, m, d, o);});
   FlickrOAuth.setAuthenticateCb(function(status, oAuthData){authenticateCb(status, oAuthData);});
 }
@@ -29,6 +36,10 @@ function downloadSet(setId, userName)
 {
   var oAuthData = 
   {
+    // these are the API keys of FlickrGetSet for flickr
+    consumerKey: "fb83db48de20585d51c21052562dc3ae",
+    consumerSecret: "4cafb2345ff39878",
+    // specific info
     setId: setId,
     userName: userName
   }

@@ -13,16 +13,29 @@ var FlickrOAuth =
 }
 
 // global variables
-var consumerKey = "fb83db48de20585d51c21052562dc3ae";
-var consumerSecret = "4cafb2345ff39878";
 var flickrUpdateCb = null;
 var authenticateCb = null;
 
+
+/**
+ * 
+ * 
+ * @author jef (10/13/2011)
+ * 
+ * @param cb 
+ */
 function setFlickrUpdateCb(cb)
 {
   flickrUpdateCb = cb;
-}
+};
 
+/**
+ * 
+ * 
+ * @author jef (10/13/2011)
+ * 
+ * @param cb 
+ */
 function setAuthenticateCb(cb)
 {
   authenticateCb = cb;
@@ -146,8 +159,8 @@ function flickrCallMethod(oAuthData, method, extraParams)
 function flickrCall(oAuthData, url, extraParams, returnJson, async)
 {
   var accessor = {
-    consumerKey : consumerKey,
-    consumerSecret: consumerSecret
+    consumerKey : oAuthData["consumerKey"],
+    consumerSecret: oAuthData["consumerSecret"]
   };
 
   if (oAuthData["token"])

@@ -1,5 +1,6 @@
 Components.utils.import("chrome://flickrgetset/content/flickrDownloadManager.jsm");
 
+
 function onCancel()
 {
   Application.console.log("Cancel clicked");

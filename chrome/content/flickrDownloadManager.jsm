@@ -126,7 +126,7 @@ function handleSetPhotos(data, oAuthData)
 {
   if (!data.photoset.photo)
   {
-    promptWarning("No photos could be retreived for the set");
+    promptWarning("No photos could be retrieved for the set");
     delete setData[data.photoset.id];
     return;
   }
@@ -312,14 +312,18 @@ function downloadNextImage()
     return;
   }
   // get a set ID if no valid one is known
-  if (!currentDownloadSet || !setData.hasOwnProperty(currentDownloadSet))
+  if (!currentDownloadSet || 
+      !setData.hasOwnProperty(currentDownloadSet) || 
+      setData[currentDownloadSet].photoList.length == 0)
   {
-    // is there a better way to get the first element from the properties list?
     currentDownloadSet = null;
     for (var setId in setData)
     {
-      currentDownloadSet = setId;
-      break;
+      if (setData[setId].photoList.length > 0)
+      {
+        currentDownloadSet = setId;
+        break;
+      }
     }
     if (!currentDownloadSet)
     {
@@ -331,7 +335,6 @@ function downloadNextImage()
   if (setData[currentDownloadSet].photoList.length == 0)
   {
     log("No more photos to download for set " + currentDownloadSet);
-    delete setData[currentDownloadSet];
     currentDownloadSet = null;
     downloadNextImage();
     return;
@@ -403,7 +406,7 @@ function addSetToGui(setId)
   else
   {
     downloadDialog.focus();
-    onDownloadDialogLoad();
+    onDownloadDialogLoad(setId);
   }
 }
 
@@ -448,7 +451,7 @@ function onDownloadDialogLoad(setId)
 
   var openButton = doc.createElement("button");
   openButton.setAttribute("label", "Open directory");
-  openButton.setAttribute("oncommand", "onOpenDir(" + setId +");");
+  openButton.setAttribute("oncommand", "onOpenDir('" + setId +"');");
   setContainer.appendChild(openButton);
 
   startDownloading();
@@ -456,9 +459,7 @@ function onDownloadDialogLoad(setId)
 
 function openDir(setId)
 {
-  log("SetId: " + setId);
-  log("set: " + setData);
-  log("set len: " + setData.length);
+  setData[setId].saveDirectory.QueryInterface(Components.interfaces.nsILocalFile);
   setData[setId].saveDirectory.reveal();
 }
 

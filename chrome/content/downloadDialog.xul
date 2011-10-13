@@ -4,7 +4,7 @@
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   buttons="cancel"
   buttonlabelcancel="Cancel"
-  ondialogcancel="return downloadDialog.onCancel();"
+  ondialogcancel="return onCancel();"
   width="500"
   height="400">
   <vbox id="setContainer" style="overflow:auto" flex="1">

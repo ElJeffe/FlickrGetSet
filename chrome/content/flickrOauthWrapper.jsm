@@ -7,6 +7,7 @@ Components.utils.import("chrome://flickrgetset/content/oauth.jsm");
 var FlickrOAuth =
 {
   setFlickrUpdateCb: setFlickrUpdateCb,
+  setAuthenticateCb: setAuthenticateCb,
   authenticate: authenticate,
   flickrCallMethod: flickrCallMethod,
 }
@@ -14,95 +15,95 @@ var FlickrOAuth =
 // global variables
 var consumerKey = "fb83db48de20585d51c21052562dc3ae";
 var consumerSecret = "4cafb2345ff39878";
-var token = null;
-var tokenSecret = null;
 var flickrUpdateCb = null;
 var authenticateCb = null;
-var authenticationNeeded = false;
 
 function setFlickrUpdateCb(cb)
 {
   flickrUpdateCb = cb;
 }
 
-function authenticate(userName, authCb)
+function setAuthenticateCb(cb)
+{
+  authenticateCb = cb;
+}
+
+function authenticate(oAuthData)
 {
   // make sure that the token is null
-  token = null;
-  tokenSecret = null;
-  authenticateCb = authCb;
+  oAuthData["token"] = null;
+  oAuthData["tokenSecret"] = null;
 
-  if (!userName)
+  if (!oAuthData.userName)
   {
     log("Not authentication needed");
-    authenticationNeeded = false;
-    authenticateCb(true, userName);
+    authenticateCb(true, oAuthData);
     return;
   }
-  var authenticationTokenList = getAuthToken(userName);
+  var authenticationTokenList = getAuthToken(oAuthData.userName);
   if (authenticationTokenList)
   {
-    token = authenticationTokenList[0];
-    tokenSecret = authenticationTokenList[1];
-    log("Existing authentication token for user " + userName + " : " + token);
+    oAuthData["token"] = authenticationTokenList[0];
+    oAuthData["tokenSecret"] = authenticationTokenList[1];
+    log("Existing authentication token for user " + oAuthData.userName + " : " + oAuthData["token"]);
 
     // test if the token is still approved
-    if (testLogin())
+    if (testLogin(oAuthData))
     {
       log("token is ok");
-      authenticateCb(true, userName);
+      authenticateCb(true, oAuthData);
       return;
     }
     else
     {
-      removeAuthToken(userName);
-      token = null;
-      tokenSecret = null;
+      removeAuthToken(oAuthData.userName);
+      oAuthData["token"] = null;
+      oAuthData["tokenSecret"] = null;
     }
   }
 
   log("TODO: Ask if authentication is needed");
 
   // request token
-  var result = flickrCall("http://www.flickr.com/services/oauth/request_token",{oauth_callback:"oob"}, false, false);
+  var result = flickrCall(oAuthData, "http://www.flickr.com/services/oauth/request_token",{oauth_callback:"oob"}, false, false);
   if (!result)
   {
     logError("Failed to get a request token");
-    authenticateCb(false, userName);
+    authenticateCb(false, oAuthData);
     return;
   }
   // save the token and token secret
-  token = result["oauth_token"];
-  tokenSecret = result["oauth_token_secret"];
+  oAuthData["token"] = result["oauth_token"];
+  oAuthData["tokenSecret"] = result["oauth_token_secret"];
 
   // request authorization
   var authorizeUrl="http://www.flickr.com/services/oauth/authorize?oauth_token="+result["oauth_token"]+"&perms=read";
   var params = {url:authorizeUrl};
-  var params = {url:authorizeUrl, verifCallback:setVerificationCode};
+  var params = {url:authorizeUrl, verifCallback:setVerificationCode, oAuthData:oAuthData};
   var window = Services.wm.getMostRecentWindow(null);
   window.openDialog("chrome://flickrgetset/content/authenticateDialog.xul",  
                     "authenticate-dialog", "chrome,centerscreen,dialog", params);
 
 }
 
-function setVerificationCode(verificationCode, status)
+function setVerificationCode(verificationCode, status, oAuthData)
 {
   log("params verif code: " + verificationCode + " status: " + status);
-  log("Token: " + token);
+  log("Token: " + oAuthData["token"]);
   if (!status)
   {
     log("Verification was canceled by user");
-    authenticateCb(false, userName);
+    authenticateCb(false, oAuthData);
     return;
   }
 
   // exchange the request token for an access token
 
-  var result = flickrCall("http://www.flickr.com/services/oauth/access_token",{oauth_verifier:verificationCode}, false, false);
+  var result = flickrCall(oAuthData, "http://www.flickr.com/services/oauth/access_token",{oauth_verifier:verificationCode}, false, false);
   if (!result)
   {
     logError("Failed to get the access token");
-    authenticateCb(false, userName);
+    authenticateCb(false, oAuthData);
     return;
   }
   var userId = result["user_nsid"];
@@ -111,23 +112,23 @@ function setVerificationCode(verificationCode, status)
   if (userId == "")
   {
     logError("Authorization failed");
-    token = null;
-    tokenSecret = null;
-    authenticateCb(false, userName);
+    oAuthData["token"] = null;
+    oAuthData["tokenSecret"] = null;
+    authenticateCb(false, oAuthData);
     return;
   }
   // save the access token
-  token = result["oauth_token"];
-  tokenSecret = result["oauth_token_secret"];
-  saveAuthToken(userName, token, tokenSecret);
+  oAuthData["token"] = result["oauth_token"];
+  oAuthData["tokenSecret"] = result["oauth_token_secret"];
+  saveAuthToken(userName, oAuthData["token"], oAuthData["tokenSecret"]);
 
   // test if the login is ok
-  authenticateCb(testLogin(), userName);
+  authenticateCb(testLogin(oAuthData), userName);
 }
 
-function testLogin()
+function testLogin(oAuthData)
 {
-  var result = flickrCall("http://api.flickr.com/services/rest",{method:"flickr.test.login"}, true, false);
+  var result = flickrCall(oAuthData, "http://api.flickr.com/services/rest",{method:"flickr.test.login"}, true, false);
   if (!result || result.stat != "ok")
   {
     return false;
@@ -135,26 +136,27 @@ function testLogin()
   return true;
 }
 
-function flickrCallMethod(method, extraParams)
+function flickrCallMethod(oAuthData, method, extraParams)
 {
+  log("flickrCallMethod " + method);
   extraParams["method"] = method;
-  flickrCall("http://api.flickr.com/services/rest",extraParams, true, true);
+  flickrCall(oAuthData, "http://api.flickr.com/services/rest",extraParams, true, true);
 }
 
-function flickrCall(url, extraParams, returnJson, async)
+function flickrCall(oAuthData, url, extraParams, returnJson, async)
 {
   var accessor = {
     consumerKey : consumerKey,
     consumerSecret: consumerSecret
   };
 
-  if (token)
+  if (oAuthData["token"])
   {
-    accessor["token"] = token;
+    accessor["token"] = oAuthData["token"];
   }
-  if (tokenSecret)
+  if (oAuthData["tokenSecret"])
   {
-    accessor["tokenSecret"] = tokenSecret;
+    accessor["tokenSecret"] = oAuthData["tokenSecret"];
   }
 
   var message = {
@@ -167,7 +169,7 @@ function flickrCall(url, extraParams, returnJson, async)
   };
   if (extraParams)
   {
-    for (p in extraParams)
+    for (var p in extraParams)
     {
       OAuth.setParameter(message, p, extraParams[p]);
     }
@@ -195,11 +197,11 @@ function flickrCall(url, extraParams, returnJson, async)
         var method = extraParams["method"];
         if (request.status != 200)
         {
-          flickrUpdateCb(false, method, extraParams);
+          flickrUpdateCb(false, method, extraParams, oAuthData);
         }
         else
         {
-          flickrUpdateCb(true, method, JSON.parse(request.responseText));
+          flickrUpdateCb(true, method, JSON.parse(request.responseText), oAuthData);
         }
       }
     }
@@ -216,10 +218,6 @@ function flickrCall(url, extraParams, returnJson, async)
       if (!returnJson)
       {
         var result = OAuth.getParameterMap(request.responseText);
-        for (var p in result)
-        {
-          log(p + ':' + result[p]);
-        }
         return result;
       }
       else

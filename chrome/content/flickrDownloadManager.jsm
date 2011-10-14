@@ -112,13 +112,14 @@ function flickrUpdate(status, method, data, oAuthData)
   log("FlickrUpdate data received for method: " + method);
   if (!status)
   {
-    log("Failed to get a result for method " + method + "\n" + data);
+    promptWarning("Failed to get a result for method " + method + "\n" + data);
     return;
   }
 
   if (data.stat && data.stat == "fail")
   {
-    log("Flickr call failed for: " + method + " Message: " + (data.message?data.message:""));
+    promptWarning("Flickr call failed for: " + method + " Message: " + (data.message?data.message:""));
+    log("SetId: " + oAuthData.setId);
     return;
   }
   switch (method)
@@ -673,6 +674,7 @@ function logError(msg)
  */
 function promptWarning(msg)
 {
+  log("WARNING: " + msg);
   Services.prompt.alert(null, "FlickrGetSet warning", msg);
 };
 

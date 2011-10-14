@@ -577,6 +577,10 @@ function onDownloadDialogLoad(setId)
   openButton.setAttribute("oncommand", "downloadDialog.onOpenDir('" + setId +"');");
   setContainer.appendChild(openButton);
 
+  var groove = doc.createElement("separator");
+  groove.setAttribute("class", "groove");
+  setContainer.appendChild(groove);
+
   startDownloading();
 };
 

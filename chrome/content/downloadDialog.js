@@ -9,8 +9,10 @@ function onCancel()
 
 function onOpenDir(setId)
 {
-  Application.console.log("onOpenDir " + setId);
   FlickrDownloadManager.openDir(setId);
 }
 
-
+function onOpenPhoto(photoId)
+{
+  FlickrDownloadManager.openPhoto(photoId);
+}

@@ -8,33 +8,55 @@ var FlickrDownloadManager =
 {
   downloadSet: downloadSet,
   openDir: openDir,
+  openPhoto: openPhoto,
   setPauze: setPauze,
 }
 
 var setData = {};
+var downloadedPhotos = {};
 var isDownloading = false;
 var currentDownloadSet;
 var downloadDialog;
 var simultaniousDownloads = 4;
 
-
+/** 
+ * Initialize the callbacks with the FlickrOAuth module 
+ * 
+ * @author jef (10/14/2011)
+ */
 function init() 
 {
-  log("init");
   FlickrOAuth.setFlickrUpdateCb(function(s, m, d, o){flickrUpdate(s, m, d, o);});
   FlickrOAuth.setAuthenticateCb(function(status, oAuthData){authenticateCb(status, oAuthData);});
-}
+};
 
+/**
+ * Trigger the download of a set
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param setId The set toe be downloaded
+ * @param userName The user that is currently logged in in Flickr
+ */
 function downloadSet(setId, userName)
 {
+  // this object will contain all data needed to sign calls
   var oAuthData = 
   {
     setId: setId,
     userName: userName
   }
   FlickrOAuth.authenticate(oAuthData);
-}
+};
 
+/**
+ * The authentication is finished
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param status True if authentication succeeded
+ * @param oAuthData OAuth signing data
+ */
 function authenticateCb(status, oAuthData)
 {
   if (!status)
@@ -65,8 +87,18 @@ function authenticateCb(status, oAuthData)
   }
 
   FlickrOAuth.flickrCallMethod(oAuthData, "flickr.photosets.getInfo",{photoset_id:oAuthData.setId});
-}
+};
 
+/**
+ * This callback will be called when a Flickr call has finished
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param status True if successful
+ * @param method The method that was called
+ * @param data The data that is returned by Flickr
+ * @param oAuthData OAuth signing data
+ */
 function flickrUpdate(status, method, data, oAuthData)
 {
   log("FlickrUpdate data received for method: " + method);
@@ -92,8 +124,19 @@ function flickrUpdate(status, method, data, oAuthData)
   default:
     log("Got a flickr update for an unknown method: " + method);
   }
-}
+};
 
+/**
+ * Handle a flickr set info call 
+ *  
+ * A directory will be asked and created 
+ * The photo information will be asked at Flickr 
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param data The set info data (in JSON format)
+ * @param oAuthData OAuth signing data
+ */
 function handleSetInfo(data, oAuthData)
 {
   var setId = data.photoset.id;
@@ -120,8 +163,17 @@ function handleSetInfo(data, oAuthData)
   // get the photos for this set
   FlickrOAuth.flickrCallMethod(oAuthData, "flickr.photosets.getPhotos", {photoset_id:setId, extras:"url_sq,url_z,url_l,url_o"});
 
-}
+};
 
+/** Handle a flickr set photos call
+ *  
+ *  Parse all retrieved data and initialize the GUI
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param data The set photos data (in JSON format)
+ * @param oAuthData OAuth signing data
+ */
 function handleSetPhotos(data, oAuthData)
 {
   if (!data.photoset.photo)
@@ -152,6 +204,7 @@ function handleSetPhotos(data, oAuthData)
     photoNames[photoName] = 1;
     var photoData = new Object();
     photoData.name = photoName;
+    photoData.id = photo.id;
     photoData.sqUrl = photo.url_sq;
     // get the biggest photo
     if (photo.url_o)
@@ -183,8 +236,18 @@ function handleSetPhotos(data, oAuthData)
   }
   setData[data.photoset.id].photoList = photoList;
   addSetToGui(data.photoset.id);
-}
+};
 
+/**
+ * Create a save directory 
+ *  
+ * Try to create a subdirectory with the set name in the given base directory 
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param baseSaveDir The dir where to create the new dir
+ * @param setName The name of the new subdir to be created in baseSaveDir
+ */
 function createSaveDir(baseSaveDir, setName) 
 {
   if (!baseSaveDir.isDirectory())
@@ -232,8 +295,15 @@ function createSaveDir(baseSaveDir, setName)
     }
   }
   return saveDir;
-}
+};
 
+/**
+ * Ask the dir to save in at the user. 
+ *  
+ * It will be initialized with the last used save dir 
+ * 
+ * @author jef (10/14/2011)
+ */
 function getBaseSaveDir()
 {
   // get the previous save dir
@@ -270,8 +340,15 @@ function getBaseSaveDir()
   prefs.setComplexValue("saveDir",
                         Components.interfaces.nsILocalFile, fp.file);
   return fp.file;
-}
+};
 
+/**
+ * Pause or unpauze downloading
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param pauze Pauze if this is true
+ */
 function setPauze(pauze)
 {
   if (pauze)
@@ -282,8 +359,13 @@ function setPauze(pauze)
   {
     startDownloading();
   }
-}
+};
 
+/**
+ * Start downloading the photos
+ * 
+ * @author jef (10/14/2011)
+ */
 function startDownloading()
 {
   if (isDownloading)
@@ -296,14 +378,24 @@ function startDownloading()
   {
     downloadNextImage();
   }
-}
+};
 
+/**
+ * Stop downloading
+ * 
+ * @author jef (10/14/2011)
+ */
 function stopDownloading()
 {
   log("Stop downloading");
   isDownloading = false;
-}
+};
 
+/**
+ * Download the next image that should be downloaded
+ * 
+ * @author jef (10/14/2011)
+ */
 function downloadNextImage()
 {
   // stop downloading if requested
@@ -343,19 +435,21 @@ function downloadNextImage()
 
   // create the filename
   var origExt = /[a-zA-Z0-9]+$/.exec(photoToDownload.bigUrl)[0];
-  log("origExt:" + origExt);
 
   var targetFile = setData[currentDownloadSet].saveDirectory.clone();
   targetFile.append(photoToDownload.name+"."+origExt);
+  photoToDownload.file = targetFile;
   if (targetFile.exists())
   {
     log("The image already exists. Skip downloading. " + targetFile.path);
     photoToDownload.progressBar.setAttribute("max", 1);
     photoToDownload.progressBar.setAttribute("value", 1);
-
+    downloadedPhotos[photoToDownload.id] = photoToDownload;
     downloadNextImage();
     return;
   }
+  log("Downloading " + targetFile.path);
+
   // create the file
   targetFile.create(targetFile.NORMAL_FILE_TYPE, 0644);
   // start the download
@@ -375,6 +469,7 @@ function downloadNextImage()
       if (aStateFlags & Components.interfaces.nsIWebProgressListener.STATE_STOP)
       {
         // This fires when the load finishes
+        downloadedPhotos[photoToDownload.id] = photoToDownload;
         downloadNextImage();
       }
     }
@@ -383,8 +478,19 @@ function downloadNextImage()
   //save file to target  
   var imageUri = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService).newURI(photoToDownload.bigUrl, null, null);
   fileDownloader.saveURI(imageUri,null,null,null,null,targetFile); 
-}
+};
 
+/**
+ * Add a new set to the GUI 
+ *  
+ * A download dialog will be created if none exists yet. 
+ * The actual adding to the UI will happen in the onDownloadDialogLoad callback, 
+ * because the dialog should first be constructed 
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param setId The set to be added to the GUI
+ */
 function addSetToGui(setId)
 {
   log("addSetToGui");
@@ -408,8 +514,15 @@ function addSetToGui(setId)
     downloadDialog.focus();
     onDownloadDialogLoad(setId);
   }
-}
+};
 
+/**
+ * Add a new set to the GUI
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param setId The set to be added
+ */
 function onDownloadDialogLoad(setId)
 {
   var doc = downloadDialog.document;
@@ -437,6 +550,7 @@ function onDownloadDialogLoad(setId)
 
     var imageEl = doc.createElement("image");
     imageEl.setAttribute("src", photo.sqUrl);
+    imageEl.setAttribute("ondblclick", "onOpenPhoto('" + photo.id + "');");
     imageBox.appendChild(imageEl);
 
     var progressBar = doc.createElement("progressmeter");
@@ -455,34 +569,104 @@ function onDownloadDialogLoad(setId)
   setContainer.appendChild(openButton);
 
   startDownloading();
-}
+};
 
+/**
+ * Try to open a directory (triggered by the downloadDialog) 
+ *  
+ * Note that this does not work on all platforms! 
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param setId The set to be opened
+ */
 function openDir(setId)
 {
   setData[setId].saveDirectory.QueryInterface(Components.interfaces.nsILocalFile);
-  setData[setId].saveDirectory.reveal();
-}
+  try
+  {
+    setData[setId].saveDirectory.reveal();
+  } catch (e)
+  {
+    Services.prompt.alert(null, "Not supported", "Opening a directory is not supported on this platform");
+  }
+};
 
+/**
+ * Try to open a photo on the local OS (triggered by the downloadDialog) 
+ *  
+ * Note that this does not work on all platforms! 
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param photoId The photo to be opened
+ */
+function openPhoto(photoId)
+{
+  if (!downloadedPhotos.hasOwnProperty(photoId))
+  {
+    // the photo has not finished downloading yet
+    return;
+  }
+  try
+  {
+    downloadedPhotos[photoId].file.QueryInterface(Components.interfaces.nsILocalFile);
+    downloadedPhotos[photoId].file.launch();
+  } catch (e)
+  {
+    logError("Failed to lauch file for " + downloadedPhotos[photoId].name);
+  }
+};
+
+/**
+ * Exit 
+ *  
+ * Stop downloading and perform cleanup 
+ * 
+ * @author jef (10/14/2011)
+ */
 function exit() {
-  log('Exiting');
   stopDownloading();
+  setData = {};
+  downloadedPhotos = {};
   window.close();
-}
+};
 
+/**
+ * Helper to log messages
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param msg 
+ */
 function log(msg)
 {
   Services.console.logStringMessage(msg);
-}
+};
 
+/**
+ * Helper to log errors
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param msg 
+ */
 function logError(msg)
 {
   Services.console.logStringMessage("ERROR: " + msg);
-}
+};
 
+/**
+ * Helper to prompt warnings
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param msg 
+ */
 function promptWarning(msg)
 {
   Services.prompt.alert(null, "FlickrGetSet warning", msg);
-}
+};
 
-
+// initialize on first load
 init();

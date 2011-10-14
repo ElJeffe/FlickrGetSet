@@ -45,12 +45,10 @@ function authenticate(oAuthData)
   {
     oAuthData["token"] = authenticationTokenList[0];
     oAuthData["tokenSecret"] = authenticationTokenList[1];
-    log("Existing authentication token for user " + oAuthData.userName + " : " + oAuthData["token"]);
 
     // test if the token is still approved
     if (testLogin(oAuthData))
     {
-      log("token is ok");
       authenticateCb(true, oAuthData);
       return;
     }
@@ -88,8 +86,6 @@ function authenticate(oAuthData)
 
 function setVerificationCode(verificationCode, status, oAuthData)
 {
-  log("params verif code: " + verificationCode + " status: " + status);
-  log("Token: " + oAuthData["token"]);
   if (!status)
   {
     log("Verification was canceled by user");
@@ -193,7 +189,6 @@ function flickrCall(oAuthData, url, extraParams, returnJson, async)
     {
       if (request.readyState == 4)
       {
-        log(request.responseText);
         var method = extraParams["method"];
         if (request.status != 200)
         {
@@ -214,7 +209,6 @@ function flickrCall(oAuthData, url, extraParams, returnJson, async)
 
     if (request.status == 200)
     {
-      log(request.responseText);
       if (!returnJson)
       {
         var result = OAuth.getParameterMap(request.responseText);
@@ -235,7 +229,6 @@ function flickrCall(oAuthData, url, extraParams, returnJson, async)
 
 function getAuthToken(userName)
 {
-  log("Get authentication token for user " + userName);
   var loginManager = Components.classes["@mozilla.org/login-manager;1"].  
                      getService(Components.interfaces.nsILoginManager); 
   var logins = loginManager.findLogins({}, "chrome://FlickrGetSet", null, "Authentication key");  

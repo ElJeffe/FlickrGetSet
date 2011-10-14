@@ -13,11 +13,6 @@ var flickrHook = {
     var doc = aEvent.originalTarget; // doc is document that triggered "onload" event  
     if (!/.*flickr\.com\/.*\/sets\/\d+.*/.test(doc.location.href))
     {
-
-      if (/.*www\.steelant\.be.*/.test(doc.location.href))
-      {
-        FlickrDownloadManager.downloadSet("72157627601593559", "ElJeffe");
-      }
       return;
     }
     Application.console.log("Flickr set loaded");
@@ -48,10 +43,11 @@ var flickrHook = {
     var setId = res[1];
     if (!setId)
     {
-      alert("Dailed to detirmine the Set ID from the url");
+      alert("Failed to determine the Set ID from the url");
       return;
     }
     Application.console.log("setid: " + setId + " User name: " + userName);
+    Components.utils.import("chrome://flickrgetset/content/flickrDownloadManager.jsm");
     FlickrDownloadManager.downloadSet(setId, userName);
   },
 

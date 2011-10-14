@@ -1,26 +1,22 @@
-var downloadDialog; if (downloadDialog == null) downloadDialog = 
-  {
-  init: function()
-  {
-    Application.console.log("init");
-    this.pauzeCallback = window.arguments[0].pauzeCallback;
-    this.openDirCallback = window.arguments[0].openDirCallback;
-    Application.console.log("Cb: " + this.pauzeCallback);
-  },
+Components.utils.import("chrome://flickrgetset/content/flickrDownloadManager.jsm");
 
+
+var downloadDialog = 
+{
   onCancel: function()
   {
     Application.console.log("Cancel clicked");
     window.close();
-    this.pauzeCallback(true);
+    FlickrDownloadManager.setPauze(true);
   },
 
   onOpenDir: function(setId)
   {
-    this.openDirCallback(setId);
-  }
+    FlickrDownloadManager.openDir(setId);
+  },
+
+  onOpenPhoto: function(photoId)
+  {
+    FlickrDownloadManager.openPhoto(photoId);
+  },
 }
-
-downloadDialog.init();
-
-

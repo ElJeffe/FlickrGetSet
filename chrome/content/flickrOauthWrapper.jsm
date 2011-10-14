@@ -148,7 +148,7 @@ function setVerificationCode(verificationCode, status, oAuthData)
   saveAuthToken(userName, oAuthData["token"], oAuthData["tokenSecret"]);
 
   // test if the login is ok
-  authenticateCb(testLogin(oAuthData), userName);
+  authenticateCb(testLogin(oAuthData), oAuthData);
 };
 
 /**
@@ -200,6 +200,17 @@ function flickrCallMethod(oAuthData, method, extraParams)
  */
 function flickrCall(oAuthData, url, extraParams, returnJson, async)
 {
+  log("oAuthData");
+  for (var p in oAuthData)
+  {
+    log(p + " : " + oAuthData[p]);
+  }
+  log("extraParams");
+  for (var p in extraParams)
+  {
+    log(p + " : " + extraParams[p]);
+  }
+
   var accessor = {
     consumerKey : oAuthData["consumerKey"],
     consumerSecret: oAuthData["consumerSecret"]
@@ -251,7 +262,8 @@ function flickrCall(oAuthData, url, extraParams, returnJson, async)
         var method = extraParams["method"];
         if (request.status != 200)
         {
-          flickrUpdateCb(false, method, extraParams, oAuthData);
+          log("Status: " + request.status + " response: " + request.responseText);
+          flickrUpdateCb(false, method, request.responseText, oAuthData);
         }
         else
         {
@@ -268,6 +280,7 @@ function flickrCall(oAuthData, url, extraParams, returnJson, async)
 
     if (request.status == 200)
     {
+      log(request.responseText);
       if (!returnJson)
       {
         var result = OAuth.getParameterMap(request.responseText);
@@ -295,9 +308,7 @@ function flickrCall(oAuthData, url, extraParams, returnJson, async)
  */
 function getAuthToken(userName)
 {
-  var loginManager = Components.classes["@mozilla.org/login-manager;1"].  
-                     getService(Components.interfaces.nsILoginManager); 
-  var logins = loginManager.findLogins({}, "chrome://FlickrGetSet", null, "Authentication key");  
+  var logins = Services.logins.findLogins({}, "chrome://FlickrGetSet", null, "Authentication key");  
   
   // Find user from returned array of nsILoginInfo objects  
   for (var i = 0; i < logins.length; i++)
@@ -325,14 +336,12 @@ function saveAuthToken(userName, token, tokenSecret)
   // remove password if there already is one defined
   removeAuthToken(userName);
   // save new login
-  var loginManager = Components.classes["@mozilla.org/login-manager;1"].  
-                     getService(Components.interfaces.nsILoginManager);
   var nsLoginInfo = new Components.Constructor("@mozilla.org/login-manager/loginInfo;1",  
                                                Components.interfaces.nsILoginInfo,  
                                                "init");
   var loginInfo = new nsLoginInfo("chrome://FlickrGetSet", null, "Authentication key",  
                                   userName, token + ":" + tokenSecret, "", "");
-  loginManager.addLogin(loginInfo);
+  Services.logins.addLogin(loginInfo);
 };
 
 /**
@@ -344,9 +353,7 @@ function saveAuthToken(userName, token, tokenSecret)
  */
 function removeAuthToken(userName)
 {
-  var loginManager = Components.classes["@mozilla.org/login-manager;1"].  
-                     getService(Components.interfaces.nsILoginManager);
-  var logins = loginManager.findLogins({}, "chrome://FlickrGetSet", null, "Authentication key");  
+  var logins = Services.logins.findLogins({}, "chrome://FlickrGetSet", null, "Authentication key");  
   for (var i = 0; i < logins.length; i++)
   {
     if (logins[i].username == userName)

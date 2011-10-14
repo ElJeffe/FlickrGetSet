@@ -32,6 +32,16 @@ function init()
 {
   FlickrOAuth.setFlickrUpdateCb(function(s, m, d, o){flickrUpdate(s, m, d, o);});
   FlickrOAuth.setAuthenticateCb(function(status, oAuthData){authenticateCb(status, oAuthData);});
+  // load the number of simultanious downloads from the prefs
+  prefs = Services.prefs.getBranch("extensions.FlickrGetSet.");
+  try
+  {
+    simultaniousDownloads = prefs.getIntPref("simultaniousDownloads");
+  }
+  catch (e)
+  {
+    logError("No simultaniousDownloads pref found");
+  }
 };
 
 /**
@@ -76,9 +86,7 @@ function authenticateCb(status, oAuthData)
   if (oAuthData.userName)
   {
     // save as default user if none exists
-    var prefs = Components.classes["@mozilla.org/preferences-service;1"]
-    .getService(Components.interfaces.nsIPrefService);
-    prefs = prefs.getBranch("extensions.FlickrGetSet.");
+    prefs = Services.prefs.getBranch("extensions.FlickrGetSet.");
 
     var defaultUser = null;
     try
@@ -113,6 +121,7 @@ function flickrUpdate(status, method, data, oAuthData)
   if (!status)
   {
     promptWarning("Failed to get a result for method " + method + "\n" + data);
+    delete setData[oAuthData.setId];
     return;
   }
 
@@ -188,7 +197,7 @@ function handleSetPhotos(data, oAuthData)
   if (!data.photoset.photo)
   {
     promptWarning("No photos could be retrieved for the set");
-    delete setData[data.photoset.id];
+    delete setData[oAuthData.setId];
     return;
   }
   var photoList = [];
@@ -318,9 +327,7 @@ function getBaseSaveDir()
   // get the previous save dir
   var prevSaveDir = null;
   // get the previously used dir from preferences
-  var prefs = Components.classes["@mozilla.org/preferences-service;1"]
-  .getService(Components.interfaces.nsIPrefService);
-  prefs = prefs.getBranch("extensions.FlickrGetSet.");
+  prefs = Services.prefs.getBranch("extensions.FlickrGetSet.");
   try
   {
     prevSaveDir = prefs.getComplexValue("saveDir", Components.interfaces.nsILocalFile);

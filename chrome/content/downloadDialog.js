@@ -1,18 +1,22 @@
 Components.utils.import("chrome://flickrgetset/content/flickrDownloadManager.jsm");
 
-function onCancel()
-{
-  Application.console.log("Cancel clicked");
-  window.close();
-  FlickrDownloadManager.setPauze(true);
-}
 
-function onOpenDir(setId)
+var downloadDialog = 
 {
-  FlickrDownloadManager.openDir(setId);
-}
+  onCancel: function()
+  {
+    Application.console.log("Cancel clicked");
+    window.close();
+    FlickrDownloadManager.setPauze(true);
+  },
 
-function onOpenPhoto(photoId)
-{
-  FlickrDownloadManager.openPhoto(photoId);
+  onOpenDir: function(setId)
+  {
+    FlickrDownloadManager.openDir(setId);
+  },
+
+  onOpenPhoto: function(photoId)
+  {
+    FlickrDownloadManager.openPhoto(photoId);
+  },
 }

@@ -12,6 +12,7 @@ var FlickrDownloadManager =
   setPauze: setPauze,
 }
 
+// global variables
 var setData = {};
 var downloadedPhotos = {};
 var isDownloading = false;
@@ -19,10 +20,13 @@ var currentDownloadSet;
 var downloadDialog;
 var simultaniousDownloads = 4;
 
-/** 
- * Initialize the callbacks with the FlickrOAuth module 
+
+/**
+ * Initialize 
+ *  
+ * Callback functions for the FlickrOAUth wrapper are set here 
  * 
- * @author jef (10/14/2011)
+ * @author jef (10/13/2011)
  */
 function init() 
 {
@@ -43,6 +47,10 @@ function downloadSet(setId, userName)
   // this object will contain all data needed to sign calls
   var oAuthData = 
   {
+    // these are the API keys of FlickrGetSet for flickr
+    consumerKey: "fb83db48de20585d51c21052562dc3ae",
+    consumerSecret: "4cafb2345ff39878",
+    // specific info
     setId: setId,
     userName: userName
   }
@@ -550,7 +558,7 @@ function onDownloadDialogLoad(setId)
 
     var imageEl = doc.createElement("image");
     imageEl.setAttribute("src", photo.sqUrl);
-    imageEl.setAttribute("ondblclick", "onOpenPhoto('" + photo.id + "');");
+    imageEl.setAttribute("ondblclick", "downloadDialog.onOpenPhoto('" + photo.id + "');");
     imageBox.appendChild(imageEl);
 
     var progressBar = doc.createElement("progressmeter");
@@ -565,7 +573,7 @@ function onDownloadDialogLoad(setId)
 
   var openButton = doc.createElement("button");
   openButton.setAttribute("label", "Open directory");
-  openButton.setAttribute("oncommand", "onOpenDir('" + setId +"');");
+  openButton.setAttribute("oncommand", "downloadDialog.onOpenDir('" + setId +"');");
   setContainer.appendChild(openButton);
 
   startDownloading();

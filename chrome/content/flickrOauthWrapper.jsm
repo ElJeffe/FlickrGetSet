@@ -179,7 +179,6 @@ function testLogin(oAuthData)
  */
 function flickrCallMethod(oAuthData, method, extraParams, async)
 {
-  log("flickrCallMethod " + method);
   extraParams["method"] = method;
   return flickrCall(oAuthData, "http://api.flickr.com/services/rest",extraParams, true, async);
 };
@@ -200,17 +199,6 @@ function flickrCallMethod(oAuthData, method, extraParams, async)
  */
 function flickrCall(oAuthData, url, extraParams, returnJson, async)
 {
-  log("oAuthData");
-  for (var p in oAuthData)
-  {
-    log(p + " : " + oAuthData[p]);
-  }
-  log("extraParams");
-  for (var p in extraParams)
-  {
-    log(p + " : " + extraParams[p]);
-  }
-
   var accessor = {
     consumerKey : oAuthData["consumerKey"],
     consumerSecret: oAuthData["consumerSecret"]
@@ -254,7 +242,7 @@ function flickrCall(oAuthData, url, extraParams, returnJson, async)
                      .createInstance(Components.interfaces.nsIXMLHttpRequest);
   if (async)
   {
-    request.open('GET', url, false);
+    request.open('GET', url, true);
     request.onreadystatechange = function ()
     {
       if (request.readyState == 4)
@@ -280,7 +268,6 @@ function flickrCall(oAuthData, url, extraParams, returnJson, async)
 
     if (request.status == 200)
     {
-      log(request.responseText);
       if (!returnJson)
       {
         var result = OAuth.getParameterMap(request.responseText);

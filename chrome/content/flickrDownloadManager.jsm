@@ -157,7 +157,7 @@ function getSetInfo(oAuthData)
   var saveDir = createSaveDir(baseSaveDir, setData[oAuthData.setId].title);
   if (!saveDir)
   {
-    log("Failed to create save directory");
+    logError("Failed to create save directory");
     return;
   }
   setData[oAuthData.setId].saveDirectory = saveDir;
@@ -179,7 +179,6 @@ function getSetInfo(oAuthData)
  */
 function flickrUpdate(status, method, data, oAuthData)
 {
-  log("FlickrUpdate data received for method: " + method);
   if (!status)
   {
     promptWarning("Failed to get a result for method " + method + "\n" + data);
@@ -288,7 +287,7 @@ function handleSetPhotos(data, oAuthData)
     }
     else
     {
-      log("Could not find a big url for " + photoName);
+      logError("Could not find a big url for " + photoName);
     }
   }
   if (photoList.length == 0)
@@ -327,7 +326,7 @@ function createSaveDir(baseSaveDir, setName)
       saveDir.create(saveDir.DIRECTORY_TYPE, 0775);
     } catch (e)
     {
-      log("Error message: " + e.message);
+      logError("Error message: " + e.message);
       promptWarning("Could not create the directory '" + saveDir.path + "'");
       return null;
     }
@@ -346,7 +345,7 @@ function createSaveDir(baseSaveDir, setName)
           break;
         } catch (e)
         {
-          log("Error message: " + e.message);
+          logError("Error message: " + e.message);
           promptWarning("Could not create the directory '" + saveDir.path + "'");
           return null;
         }
@@ -554,7 +553,6 @@ function downloadNextImage()
  */
 function addSetToGui(setId)
 {
-  log("addSetToGui");
   if (!downloadDialog || downloadDialog.closed)
   {
 
@@ -611,7 +609,7 @@ function onDownloadDialogLoad(setId)
 
     var imageEl = doc.createElement("image");
     imageEl.setAttribute("src", photo.sqUrl);
-    imageEl.setAttribute("ondblclick", "downloadDialog.onOpenPhoto('" + photo.id + "');");
+    imageEl.addEventListener("dblclick", function() {openPhoto(photo.id);}, true);
     imageBox.appendChild(imageEl);
 
     var progressBar = doc.createElement("progressmeter");
@@ -626,7 +624,7 @@ function onDownloadDialogLoad(setId)
 
   var openButton = doc.createElement("button");
   openButton.setAttribute("label", "Open directory");
-  openButton.setAttribute("oncommand", "downloadDialog.onOpenDir('" + setId +"');");
+  openButton.addEventListener("click", function(){openDir(setId);}, true);
   setContainer.appendChild(openButton);
 
   var groove = doc.createElement("separator");

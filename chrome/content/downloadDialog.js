@@ -9,14 +9,4 @@ var downloadDialog =
     window.close();
     FlickrDownloadManager.setPauze(true);
   },
-
-  onOpenDir: function(setId)
-  {
-    FlickrDownloadManager.openDir(setId);
-  },
-
-  onOpenPhoto: function(photoId)
-  {
-    FlickrDownloadManager.openPhoto(photoId);
-  },
 }

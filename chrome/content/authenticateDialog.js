@@ -1,3 +1,5 @@
+Components.utils.import("resource://gre/modules/Services.jsm");
+
 var authenticateDialog = 
 {
 
@@ -6,10 +8,7 @@ var authenticateDialog =
     var url = window.arguments[0].url;
     this.verifCallback = window.arguments[0].verifCallback;
     this.oAuthData = window.arguments[0].oAuthData;
-
-    var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-    .getService(Components.interfaces.nsIWindowMediator);
-    var mainWindow = wm.getMostRecentWindow("navigator:browser");
+    var mainWindow = Services.wm.getMostRecentWindow("navigator:browser");
     var tab = mainWindow.gBrowser.addTab(url);
     mainWindow.gBrowser.selectedTab = tab;
     var tabBrowser = mainWindow.gBrowser.getBrowserForTab(tab);

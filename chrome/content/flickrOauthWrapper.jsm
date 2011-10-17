@@ -177,11 +177,11 @@ function testLogin(oAuthData)
  * @param method The method to be called
  * @param extraParams extra params that should be added to the call
  */
-function flickrCallMethod(oAuthData, method, extraParams)
+function flickrCallMethod(oAuthData, method, extraParams, async)
 {
   log("flickrCallMethod " + method);
   extraParams["method"] = method;
-  flickrCall(oAuthData, "http://api.flickr.com/services/rest",extraParams, true, true);
+  return flickrCall(oAuthData, "http://api.flickr.com/services/rest",extraParams, true, async);
 };
 
 /**

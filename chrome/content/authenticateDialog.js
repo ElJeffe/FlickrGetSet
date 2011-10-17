@@ -35,7 +35,6 @@ var authenticateDialog =
         var content = spanList[i].textContent.trim();
         if (/\d\d\d-\d\d\d-\d\d\d/.exec(content))
         {
-          Application.console.log("Found verification code: " + content);
           document.getElementById("verificationCode").value = content;
           window.focus();
         }
@@ -45,14 +44,12 @@ var authenticateDialog =
 
   onOk: function()
   {
-    Application.console.log("Dialog verif code: " + document.getElementById("verificationCode").value);
     window.close();
     this.verifCallback(document.getElementById("verificationCode").value, true, this.oAuthData);
   },
 
   onCancel: function()
   {
-    Application.console.log("Cancel clicked");
     window.close();
     this.verifCallback(null, false, this.oAuthData);
   }

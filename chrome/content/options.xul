@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+
+<prefwindow
+     title="FlickrGetSet Preferences"
+     xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+	<prefpane label="FlickrGetSet Preferences">
+		<preferences>
+			<preference id="simDownloadsPref" name="extensions.FlickrGetSet.simultaniousDownloads" type="int"/>
+
+		</preferences>
+
+			<grid>
+				<columns>
+					<column flex="4"/>
+
+					<column flex="1"/>
+				</columns>
+				<rows>
+					<row>
+						<label control="simDownloads" value="Number of simultanious downloads"/>
+						<textbox id="simDownloads" type="number" min="1" max="20" preference="simDownloadsPref"/>
+					</row>
+				</rows>
+			</grid>
+
+	</prefpane>
+
+</prefwindow>

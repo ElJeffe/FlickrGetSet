@@ -101,12 +101,74 @@ function authenticateCb(status, oAuthData)
       prefs.setCharPref("defaultUser", oAuthData.userName);
     }
   }
-
-  FlickrOAuth.flickrCallMethod(oAuthData, "flickr.photosets.getInfo",{photoset_id:oAuthData.setId});
+  getSetInfo(oAuthData);
 };
 
 /**
- * This callback will be called when a Flickr call has finished
+ * Get all the info associated with a set
+ * 
+ * @author jef (10/17/2011)
+ * 
+ * @param oAuthData 
+ */
+function getSetInfo(oAuthData)
+{
+  // initialize the set
+  if (setData[oAuthData.setId])
+  {
+    promptWarning("This set is already being downloaded");
+    return;
+  }
+  setData[oAuthData.setId] = new Object();
+  var data = FlickrOAuth.flickrCallMethod(oAuthData, "flickr.photosets.getInfo",{photoset_id:oAuthData.setId}, false);
+  if (!data)
+  {
+    promptWarning("Failed to get info for the set " + oAuthData.setId);
+    return;
+  }
+  if (data.stat && data.stat == "fail")
+  {
+    promptWarning("Flickr call failed for flickr.photosets.getInfo. Message: " + (data.message?data.message:""));
+    log("SetId: " + oAuthData.setId);
+    return;
+  }
+
+  handleSetInfo(data);
+  data = FlickrOAuth.flickrCallMethod(oAuthData, "flickr.photosets.getPhotos", {photoset_id:oAuthData.setId, extras:"url_sq,url_z,url_l,url_o"}, false);
+  if (!data)
+  {
+    promptWarning("Failed to get photos for the set " + oAuthData.setId);
+    return;
+  }
+  if (data.stat && data.stat == "fail")
+  {
+    promptWarning("Flickr call failed for flickr.photosets.getPhotos. Message: " + (data.message?data.message:""));
+    log("SetId: " + oAuthData.setId);
+    return;
+  }
+  handleSetPhotos(data);
+
+  var baseSaveDir = getBaseSaveDir();
+  if (!baseSaveDir)
+  {
+    log("Choosing saving directory has been canceled");
+    return;
+  }
+  var saveDir = createSaveDir(baseSaveDir, setData[oAuthData.setId].title);
+  if (!saveDir)
+  {
+    log("Failed to create save directory");
+    return;
+  }
+  setData[oAuthData.setId].saveDirectory = saveDir;
+  addSetToGui(oAuthData.setId);
+};
+
+/**
+ * This callback will be called when a Flickr call has finished 
+ *  
+ * NOTE: this callback function is only used when the calls are done asyncronously. Since this seems to fail for some reason 
+ * (request.send() returns an error), the calls are done synchronously now... 
  * 
  * @author jef (10/14/2011)
  * 
@@ -159,27 +221,10 @@ function handleSetInfo(data, oAuthData)
 {
   var setId = data.photoset.id;
   var setTitle = data.photoset.title._content;
-  if (setData[setId])
-  {
-    promptWarning("This set is already being downloaded");
-    return;
-  }
-  var baseSaveDir = getBaseSaveDir();
-  if (!baseSaveDir)
-  {
-    log("Choosing saving directory has been canceled");
-    return;
-  }
-  var saveDir = createSaveDir(baseSaveDir, setTitle);
-  if (!saveDir)
-  {
-    log("Failed to create save directory");
-    return;
-  }
   // save the data
-  setData[setId] = {title:setTitle, saveDirectory:saveDir};
+  setData[setId].title = setTitle;
   // get the photos for this set
-  FlickrOAuth.flickrCallMethod(oAuthData, "flickr.photosets.getPhotos", {photoset_id:setId, extras:"url_sq,url_z,url_l,url_o"});
+  // FlickrOAuth.flickrCallMethod(oAuthData, "flickr.photosets.getPhotos", {photoset_id:setId, extras:"url_sq,url_z,url_l,url_o"});
 
 };
 
@@ -253,7 +298,7 @@ function handleSetPhotos(data, oAuthData)
     return;
   }
   setData[data.photoset.id].photoList = photoList;
-  addSetToGui(data.photoset.id);
+  // addSetToGui(data.photoset.id);
 };
 
 /**

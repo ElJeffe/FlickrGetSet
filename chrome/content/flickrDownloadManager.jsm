@@ -20,6 +20,8 @@ var currentDownloadSet;
 var downloadDialog;
 var simultaniousDownloads = 4;
 
+var asyncCalls = true;
+
 
 /**
  * Initialize 
@@ -101,7 +103,15 @@ function authenticateCb(status, oAuthData)
       prefs.setCharPref("defaultUser", oAuthData.userName);
     }
   }
-  getSetInfo(oAuthData);
+  if (asyncCalls)
+  {
+    setData[oAuthData.setId] = new Object();
+    FlickrOAuth.flickrCallMethod(oAuthData, "flickr.photosets.getInfo",{photoset_id:oAuthData.setId}, true);
+  }
+  else
+  {
+    getSetInfo(oAuthData);
+  }
 };
 
 /**
@@ -223,7 +233,10 @@ function handleSetInfo(data, oAuthData)
   // save the data
   setData[setId].title = setTitle;
   // get the photos for this set
-  // FlickrOAuth.flickrCallMethod(oAuthData, "flickr.photosets.getPhotos", {photoset_id:setId, extras:"url_sq,url_z,url_l,url_o"});
+  if (asyncCalls)
+  {
+    FlickrOAuth.flickrCallMethod(oAuthData, "flickr.photosets.getPhotos", {photoset_id:setId, extras:"url_sq,url_z,url_l,url_o"}, true);
+  }
 
 };
 
@@ -297,7 +310,23 @@ function handleSetPhotos(data, oAuthData)
     return;
   }
   setData[data.photoset.id].photoList = photoList;
-  // addSetToGui(data.photoset.id);
+  if (asyncCalls)
+  {
+    var baseSaveDir = getBaseSaveDir();
+    if (!baseSaveDir)
+    {
+      log("Choosing saving directory has been canceled");
+      return;
+    }
+    var saveDir = createSaveDir(baseSaveDir, setData[oAuthData.setId].title);
+    if (!saveDir)
+    {
+      logError("Failed to create save directory");
+      return;
+    }
+    setData[oAuthData.setId].saveDirectory = saveDir;
+    addSetToGui(oAuthData.setId);
+  }
 };
 
 /**

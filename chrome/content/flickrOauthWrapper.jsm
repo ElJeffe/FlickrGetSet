@@ -239,7 +239,7 @@ function flickrCall(oAuthData, url, extraParams, returnJson, async)
 
   var url = message["action"] + '?' + OAuth.formEncode(message.parameters);
   var request = Components.classes["@mozilla.org/xmlextras/xmlhttprequest;1"]
-                     .createInstance(Components.interfaces.nsIXMLHttpRequest);
+                     .createInstance();
   if (async)
   {
     request.open('GET', url, true);

@@ -3,7 +3,7 @@
 <dialog id="downloadDialog" title="Download set"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   buttons="cancel"
-  buttonlabelcancel="Cancel"
+  buttonlabelcancel="Close"
   ondialogcancel="return downloadDialog.onCancel();"
   width="500"
   height="400">

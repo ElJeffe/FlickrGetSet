@@ -10,6 +10,7 @@
     <em:description>Download a complete set from Flickr</em:description>
     <em:aboutURL>chrome://FlickrGetSet/content/about.xul</em:aboutURL>
     <em:optionsURL>chrome://FlickrGetSet/content/options.xul</em:optionsURL>
+    <em:homepageURL>http://www.cloudscratcher.be/projects/FlickrGetSet/</em:homepageURL>
     <em:targetApplication>
       <Description>
         <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id> <!-- Firefox -->

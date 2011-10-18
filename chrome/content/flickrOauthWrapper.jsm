@@ -1,3 +1,28 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is a module to manage Flickr oauth calls.
+ *
+ * The Initial Developer of the Original Code is
+ * CloudScratcher BVBA.
+ * Portions created by the Initial Developer are Copyright (C) 2011
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Jef Steelant <flickrgetset@cloudscratcher.be>
+ *
+ * ***** END LICENSE BLOCK ***** */
+
 var EXPORTED_SYMBOLS = ["FlickrOAuth"];
 
 Components.utils.import("resource://gre/modules/Services.jsm");
@@ -67,26 +92,29 @@ function authenticate(oAuthData)
     oAuthData["tokenSecret"] = authenticationTokenList[1];
 
     // test if the token is still approved
-    if (testLogin(oAuthData))
-    {
-      authenticateCb(true, oAuthData);
-      return;
-    }
-    else
-    {
-      removeAuthToken(oAuthData.userName);
-      oAuthData["token"] = null;
-      oAuthData["tokenSecret"] = null;
-    }
+    flickrCall(oAuthData, "http://api.flickr.com/services/rest",{method:"flickr.test.login"}, true, testLoginCb);
+    return;
   }
 
   log("TODO: Ask if authentication is needed");
 
   // request token
-  var result = flickrCall(oAuthData, "http://www.flickr.com/services/oauth/request_token",{oauth_callback:"oob"}, false, false);
+  flickrCall(oAuthData, "http://www.flickr.com/services/oauth/request_token", {oauth_callback:"oob"}, false, requestTokenCb);
+
+};
+
+function requestTokenCb(status, method, data, oAuthData)
+{
+  if (!status)
+  {
+    promptWarning("Failed to request token");
+    authenticateCb(false, oAuthData);
+    return;
+  }
+  var result = OAuth.getParameterMap(data);
   if (!result)
   {
-    logError("Failed to get a request token");
+    promptWarning("Failed to request token 2");
     authenticateCb(false, oAuthData);
     return;
   }
@@ -98,11 +126,10 @@ function authenticate(oAuthData)
   var authorizeUrl="http://www.flickr.com/services/oauth/authorize?oauth_token="+result["oauth_token"]+"&perms=read";
   var params = {url:authorizeUrl};
   var params = {url:authorizeUrl, verifCallback:setVerificationCode, oAuthData:oAuthData};
-  var window = Services.wm.getMostRecentWindow(null);
+  var window = Services.wm.getMostRecentWindow("navigator:browser");
   window.openDialog("chrome://flickrgetset/content/authenticateDialog.xul",  
                     "authenticate-dialog", "chrome,centerscreen,dialog", params);
-
-};
+}
 
 /**
  * Callback from authenticateDialog to set the verification code
@@ -124,10 +151,21 @@ function setVerificationCode(verificationCode, status, oAuthData)
 
   // exchange the request token for an access token
 
-  var result = flickrCall(oAuthData, "http://www.flickr.com/services/oauth/access_token",{oauth_verifier:verificationCode}, false, false);
+  flickrCall(oAuthData, "http://www.flickr.com/services/oauth/access_token",{oauth_verifier:verificationCode}, false, accessTokenCb);
+};
+
+function accessTokenCb(status, method, data, oAuthData)
+{
+  if (!status)
+  {
+    promptWarning("Failed to get access token");
+    authenticateCb(false, oAuthData);
+    return;
+  }
+  var result = OAuth.getParameterMap(data);
   if (!result)
   {
-    logError("Failed to get the access token");
+    promptWarning("Failed to get access token 2");
     authenticateCb(false, oAuthData);
     return;
   }
@@ -147,26 +185,37 @@ function setVerificationCode(verificationCode, status, oAuthData)
   oAuthData["tokenSecret"] = result["oauth_token_secret"];
   saveAuthToken(userName, oAuthData["token"], oAuthData["tokenSecret"]);
 
-  // test if the login is ok
-  authenticateCb(testLogin(oAuthData), oAuthData);
-};
+  authenticateCb(true, oAuthData);
+}
+
 
 /**
- * Test if the OAuth signing data is authorized by Flickr
+ * Check if the testlogin succeeded. If not, the authentication process is called again.
  * 
- * @author jef (10/14/2011)
+ * @author jef (10/18/2011)
  * 
- * @param oAuthData OAuth signing data
+ * @param status 
+ * @param method 
+ * @param data 
+ * @param oAuthData 
  */
-function testLogin(oAuthData)
+function testLoginCb(status, method, data, oAuthData)
 {
-  var result = flickrCall(oAuthData, "http://api.flickr.com/services/rest",{method:"flickr.test.login"}, true, false);
+  if (!status)
+  {
+    promptWarning("Calling " + method + "failed");
+    authenticateCb(false, oAuthData);
+    return;
+  }
+  var result = JSON.parse(data);
   if (!result || result.stat != "ok")
   {
-    return false;
+    removeAuthToken(oAuthData.userName);
+    authenticate(oAuthData);
+    return;
   }
-  return true;
-};
+  authenticateCb(true, oAuthData);
+}
 
 /**
  * Call a Flickr method
@@ -177,10 +226,10 @@ function testLogin(oAuthData)
  * @param method The method to be called
  * @param extraParams extra params that should be added to the call
  */
-function flickrCallMethod(oAuthData, method, extraParams, async)
+function flickrCallMethod(oAuthData, method, extraParams)
 {
   extraParams["method"] = method;
-  return flickrCall(oAuthData, "http://api.flickr.com/services/rest",extraParams, true, async);
+  return flickrCall(oAuthData, "http://api.flickr.com/services/rest",extraParams, true, flickrUpdateCb);
 };
 
 /**
@@ -197,7 +246,7 @@ function flickrCallMethod(oAuthData, method, extraParams, async)
  * @param returnJson True if the result should be returned as JSON
  * @param async True if the call should be done asynchronously
  */
-function flickrCall(oAuthData, url, extraParams, returnJson, async)
+function flickrCall(oAuthData, url, extraParams, returnJson, callBack)
 {
   var accessor = {
     consumerKey : oAuthData["consumerKey"],
@@ -238,53 +287,47 @@ function flickrCall(oAuthData, url, extraParams, returnJson, async)
   OAuth.completeRequest(message, accessor);
 
   var url = message["action"] + '?' + OAuth.formEncode(message.parameters);
+  var method = null;
+  if (extraParams.hasOwnProperty("method"))
+  {
+    method = extraParams["method"];
+  }
+  Services.wm.getMostRecentWindow("navigator:browser").setTimeout(function(){callAsync(url, method, oAuthData, callBack);}, 0);
+};
+
+/**
+ * Initiate an asynchronous call 
+ *  
+ * @author jef (10/18/2011)
+ * 
+ * @param url 
+ * @param method 
+ * @param oAuthData 
+ * @param callBack 
+ */
+function callAsync(url, method, oAuthData, callBack)
+{
   var request = Components.classes["@mozilla.org/xmlextras/xmlhttprequest;1"]
                      .createInstance();
-  if (async)
+  request.open('GET', url, true);
+  request.onreadystatechange = function ()
   {
-    request.open('GET', url, true);
-    request.onreadystatechange = function ()
+    if (request.readyState == 4)
     {
-      if (request.readyState == 4)
+      if (request.status != 200)
       {
-        var method = extraParams["method"];
-        if (request.status != 200)
-        {
-          log("Status: " + request.status + " response: " + request.responseText);
-          flickrUpdateCb(false, method, request.responseText, oAuthData);
-        }
-        else
-        {
-          flickrUpdateCb(true, method, JSON.parse(request.responseText), oAuthData);
-        }
-      }
-    }
-    request.send(null);
-  }
-  else
-  {
-    request.open('GET', url, false);
-    request.send(null);
-
-    if (request.status == 200)
-    {
-      if (!returnJson)
-      {
-        var result = OAuth.getParameterMap(request.responseText);
-        return result;
+        log("Status: " + request.status + " response: " + request.responseText);
+        callBack(false, method, request.responseText, oAuthData);
       }
       else
       {
-        return JSON.parse(request.responseText);
+        callBack(true, method, request.responseText, oAuthData);
       }
     }
-    else
-    {
-      logError("Call failed for action: " + message["action"] + "\nStatus: " + request.status + "\nResponse:\n" + request.responseText);
-      return null;
-    }
   }
-};
+  request.send(null);
+
+}
 
 /**
  * Try to get an existing authorization token from the login manager
@@ -345,7 +388,7 @@ function removeAuthToken(userName)
   {
     if (logins[i].username == userName)
     {
-      loginManager.removeLogin(logins[i]);
+      Services.logins.removeLogin(logins[i]);
       return;
     }
   }
@@ -373,5 +416,18 @@ function log(msg)
 function logError(msg)
 {
   Services.console.logStringMessage("ERROR: " + msg);
+};
+
+/**
+ * Helper to prompt warnings
+ * 
+ * @author jef (10/14/2011)
+ * 
+ * @param msg 
+ */
+function promptWarning(msg)
+{
+  log("WARNING: " + msg);
+  Services.prompt.alert(null, "FlickrOauth warning", msg);
 };
 

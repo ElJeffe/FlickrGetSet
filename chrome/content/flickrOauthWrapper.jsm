@@ -112,6 +112,18 @@ function authenticate(oAuthData)
 
 };
 
+/**
+ * Callback of request token 
+ *  
+ * If succeeded, initiate the exchange of a request token to an authenticate token 
+ * 
+ * @author jef (10/18/2011)
+ * 
+ * @param status 
+ * @param method 
+ * @param data 
+ * @param oAuthData 
+ */
 function requestTokenCb(status, method, data, oAuthData)
 {
   if (!status)
@@ -123,7 +135,8 @@ function requestTokenCb(status, method, data, oAuthData)
   var result = OAuth.getParameterMap(data);
   if (!result)
   {
-    promptWarning("Failed to request token 2");
+    promptWarning("Failed to parse the  request token response");
+    log("data: " + data);
     authenticateCb(false, oAuthData);
     return;
   }
@@ -163,6 +176,18 @@ function setVerificationCode(verificationCode, status, oAuthData)
   flickrCall(oAuthData, "http://www.flickr.com/services/oauth/access_token",{oauth_verifier:verificationCode}, false, accessTokenCb);
 };
 
+/**
+ * Callback of the request of an access token 
+ *  
+ * If succeeded, save the access token in the login manager 
+ * 
+ * @author jef (10/18/2011)
+ * 
+ * @param status 
+ * @param method 
+ * @param data 
+ * @param oAuthData 
+ */
 function accessTokenCb(status, method, data, oAuthData)
 {
   if (!status)
@@ -174,7 +199,8 @@ function accessTokenCb(status, method, data, oAuthData)
   var result = OAuth.getParameterMap(data);
   if (!result)
   {
-    promptWarning("Failed to get access token 2");
+    promptWarning("Failed to parse the  access token response");
+    log("data: " + data);
     authenticateCb(false, oAuthData);
     return;
   }

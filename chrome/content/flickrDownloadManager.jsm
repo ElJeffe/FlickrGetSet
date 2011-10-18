@@ -224,8 +224,8 @@ function flickrUpdate(status, method, data, oAuthData)
 
   if (data.stat && data.stat == "fail")
   {
-    promptWarning("Flickr call failed for: " + method + " Message: " + (data.message?data.message:""));
-    log("SetId: " + oAuthData.setId);
+    promptWarning("Flickr call failed for: " + method + "\nThis can happen if you did not authorize FlickrGetSet, or if you are downloading with a guest pass.");
+    log("SetId: " + oAuthData.setId + "\nData: " + data.message?data.message:"");
     return;
   }
   switch (method)
@@ -663,8 +663,9 @@ function onDownloadDialogLoad(setId)
     imageBox.setAttribute("align", "center");
 
     var imageEl = doc.createElement("image");
+    imageEl.setAttribute("id", photo.id);
     imageEl.setAttribute("src", photo.sqUrl);
-    imageEl.addEventListener("dblclick", function() {openPhoto(photo.id);}, true);
+    imageEl.addEventListener("dblclick", function() { openPhoto(this.id); }, true);
     imageBox.appendChild(imageEl);
 
     var progressBar = doc.createElement("progressmeter");

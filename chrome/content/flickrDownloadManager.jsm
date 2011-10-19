@@ -663,9 +663,9 @@ function onDownloadDialogLoad(setId)
     imageBox.setAttribute("align", "center");
 
     var imageEl = doc.createElement("image");
-    imageEl.setAttribute("id", photo.id);
+    imageEl.setAttribute("photoid", photo.id);
     imageEl.setAttribute("src", photo.sqUrl);
-    imageEl.addEventListener("dblclick", function() { openPhoto(this.id); }, true);
+    imageEl.addEventListener("dblclick", function() { openPhoto(this.photoid); }, true);
     imageBox.appendChild(imageEl);
 
     var progressBar = doc.createElement("progressmeter");
@@ -680,7 +680,8 @@ function onDownloadDialogLoad(setId)
 
   var openButton = doc.createElement("button");
   openButton.setAttribute("label", "Open directory");
-  openButton.addEventListener("click", function(){openDir(setId);}, true);
+  openButton.setAttribute("setid", setId);
+  openButton.addEventListener("click", function(){openDir(this.setid);}, true);
   setContainer.appendChild(openButton);
 
   var groove = doc.createElement("separator");
@@ -701,6 +702,7 @@ function onDownloadDialogLoad(setId)
  */
 function openDir(setId)
 {
+  log("open dir for " + setId);
   setData[setId].saveDirectory.QueryInterface(Components.interfaces.nsILocalFile);
   try
   {
